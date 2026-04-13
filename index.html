@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PIXEL MELT — TOOL</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { overflow:hidden; background:#0a0a0c; height:100vh; font-family:'JetBrains Mono','Courier New',monospace; color:rgba(200,205,200,0.75); }
+  canvas { position:fixed; inset:0; z-index:0; cursor:grab; }
+  canvas.dragging { cursor:grabbing; }
+
+  /* ═══════ LOADER ═══════ */
+  #loader {
+    position:fixed; inset:0; display:flex; flex-direction:column;
+    justify-content:center; align-items:center; background:#0a0a0c;
+    z-index:200; color:rgba(180,190,185,0.5); font-size:11px; letter-spacing:4px;
+    cursor:pointer; transition:opacity .8s;
+  }
+  #loader.hidden { opacity:0; pointer-events:none; }
+  #loader .border {
+    width:220px; height:220px; border:1px solid rgba(180,190,185,0.12);
+    display:flex; flex-direction:column; justify-content:center; align-items:center; gap:14px;
+  }
+  #fileInput { display:none; }
+
+  /* ═══════ PANEL ═══════ */
+  #panel {
+    position:fixed; left:0; top:0; bottom:0; width:260px;
+    background:rgba(10,10,14,0.94); border-right:1px solid rgba(255,255,255,0.06);
+    z-index:100; display:flex; flex-direction:column; transition:transform .35s ease;
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    user-select:none;
+  }
+  #panel.collapsed { transform:translateX(-260px); }
+
+  .p-head {
+    padding:20px 18px 14px; border-bottom:1px solid rgba(255,255,255,0.06);
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .p-head .title {
+    font-size:10px; font-weight:700; letter-spacing:5px;
+    text-transform:uppercase; color:rgba(255,255,255,0.4);
+  }
+  .p-head .ver {
+    font-size:8px; letter-spacing:2px; color:rgba(255,255,255,0.15); margin-top:3px;
+  }
+
+  #panelToggle {
+    position:fixed; left:260px; top:50%; transform:translateY(-50%);
+    width:22px; height:48px; background:rgba(10,10,14,0.85);
+    border:1px solid rgba(255,255,255,0.06); border-left:none;
+    color:rgba(255,255,255,0.25); font-size:10px; cursor:pointer;
+    z-index:101; display:flex; align-items:center; justify-content:center;
+    transition:left .35s ease, background .2s;
+    backdrop-filter:blur(8px);
+  }
+  #panelToggle:hover { background:rgba(30,30,40,0.95); color:rgba(255,255,255,0.5); }
+  #panel.collapsed ~ #panelToggle { left:0; border-left:1px solid rgba(255,255,255,0.06); }
+
+  .p-body {
+    flex:1; overflow-y:auto; padding:8px 0;
+    scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.08) transparent;
+  }
+  .p-body::-webkit-scrollbar { width:3px; }
+  .p-body::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.08); }
+
+  /* ─── Controls ─── */
+  .ctrl {
+    padding:14px 18px 12px; border-bottom:1px solid rgba(255,255,255,0.03);
+  }
+  .ctrl-label {
+    font-size:9px; font-weight:500; letter-spacing:3px; text-transform:uppercase;
+    color:rgba(255,255,255,0.3); margin-bottom:10px; display:flex;
+    justify-content:space-between; align-items:center;
+  }
+  .ctrl-val {
+    font-weight:300; color:rgba(255,255,255,0.5); letter-spacing:1px; font-size:9px;
+  }
+
+  /* Range slider */
+  input[type=range] {
+    -webkit-appearance:none; appearance:none; width:100%; height:1px;
+    background:rgba(255,255,255,0.12); outline:none; cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance:none; width:8px; height:8px; background:#fff;
+    border:none; cursor:pointer; margin-top:0;
+  }
+  input[type=range]::-moz-range-thumb {
+    width:8px; height:8px; background:#fff; border:none; cursor:pointer; border-radius:0;
+  }
+  input[type=range]::-webkit-slider-runnable-track { height:1px; }
+
+  /* Preset swatches */
+  .presets {
+    display:grid; grid-template-columns:repeat(3,1fr); gap:6px;
+  }
+  .swatch {
+    height:28px; cursor:pointer; border:1px solid rgba(255,255,255,0.06);
+    transition:border-color .2s, transform .15s; position:relative;
+  }
+  .swatch:hover { border-color:rgba(255,255,255,0.2); transform:scale(1.04); }
+  .swatch.active { border-color:rgba(255,255,255,0.5); }
+  .swatch .swatch-label {
+    position:absolute; bottom:2px; left:0; right:0; text-align:center;
+    font-size:7px; letter-spacing:1.5px; color:rgba(255,255,255,0.55);
+    text-transform:uppercase; text-shadow:0 1px 3px rgba(0,0,0,0.8);
+  }
+
+  /* Toggle */
+  .toggle-row { display:flex; align-items:center; gap:10px; }
+  .toggle-switch {
+    width:34px; height:14px; background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.1); cursor:pointer; position:relative;
+    transition:background .2s;
+  }
+  .toggle-switch.on { background:rgba(255,255,255,0.15); }
+  .toggle-switch::after {
+    content:''; position:absolute; top:1px; left:2px;
+    width:10px; height:10px; background:rgba(255,255,255,0.3);
+    transition:left .2s, background .2s;
+  }
+  .toggle-switch.on::after { left:20px; background:rgba(255,255,255,0.7); }
+  .toggle-label { font-size:8px; letter-spacing:2px; color:rgba(255,255,255,0.25); }
+
+  /* Segmented control */
+  .seg-ctrl {
+    display:flex; border:1px solid rgba(255,255,255,0.08); margin-bottom:10px;
+  }
+  .seg {
+    flex:1; padding:6px 0; background:transparent; border:none; border-right:1px solid rgba(255,255,255,0.06);
+    color:rgba(255,255,255,0.25); font-family:inherit; font-size:8px; letter-spacing:2px;
+    text-transform:uppercase; cursor:pointer; transition:background .2s, color .2s;
+  }
+  .seg:last-child { border-right:none; }
+  .seg:hover { color:rgba(255,255,255,0.4); background:rgba(255,255,255,0.03); }
+  .seg.active { color:rgba(255,255,255,0.7); background:rgba(255,255,255,0.06); }
+
+  /* Color inputs */
+  .color-row { display:flex; gap:8px; align-items:center; }
+  .color-wrap {
+    display:flex; align-items:center; gap:6px;
+  }
+  .color-wrap label {
+    font-size:7px; letter-spacing:2px; color:rgba(255,255,255,0.2); text-transform:uppercase;
+  }
+  input[type=color] {
+    -webkit-appearance:none; appearance:none; width:28px; height:18px;
+    background:none; border:1px solid rgba(255,255,255,0.12); cursor:pointer; padding:0;
+  }
+  input[type=color]::-webkit-color-swatch-wrapper { padding:1px; }
+  input[type=color]::-webkit-color-swatch { border:none; }
+
+  /* BW selector */
+  .bw-row { display:flex; gap:6px; }
+  .bw-btn {
+    width:32px; height:20px; border:1px solid rgba(255,255,255,0.1); cursor:pointer;
+    transition:border-color .2s;
+  }
+  .bw-btn.active { border-color:rgba(255,255,255,0.5); }
+
+  /* Action buttons */
+  .ctrl-actions {
+    padding:16px 18px; display:flex; gap:8px;
+  }
+  .btn {
+    flex:1; padding:8px 0; background:transparent; border:1px solid rgba(255,255,255,0.1);
+    color:rgba(255,255,255,0.4); font-family:inherit; font-size:8px; letter-spacing:2px;
+    text-transform:uppercase; cursor:pointer; transition:all .2s;
+  }
+  .btn:hover { border-color:rgba(255,255,255,0.3); color:rgba(255,255,255,0.7); background:rgba(255,255,255,0.03); }
+
+  /* Sub-controls */
+  .ctrl-sub { margin-top:10px; }
+  .ctrl-sub .ctrl-label { margin-bottom:6px; }
+  .ctrl-hint-inline {
+    margin-top:4px; font-size:6.5px; letter-spacing:1.5px;
+    color:rgba(255,255,255,0.13); text-transform:uppercase;
+  }
+
+  /* Sub-options visibility */
+  .sub-options { display:none; }
+  .sub-options.visible { display:block; }
+</style>
+</head>
+<body>
+
+<!-- ═══════ LOADER ═══════ -->
+<div id="loader" onclick="document.getElementById('fileInput').click()">
+  <div class="border">
+    <div style="font-size:32px;opacity:0.25;">+</div>
+    <div>DROP IMAGE</div>
+    <div style="font-size:8px;opacity:0.3;margin-top:4px;">OR CLICK TO BROWSE</div>
+  </div>
+  <input type="file" id="fileInput" accept="image/*">
+</div>
+
+<!-- ═══════ PANEL ═══════ -->
+<div id="panel">
+  <div class="p-head">
+    <div>
+      <div class="title">PIXEL MELT</div>
+      <div class="ver">ENGINE V4.1</div>
+    </div>
+  </div>
+  <div class="p-body">
+
+    <!-- SPEED -->
+    <div class="ctrl">
+      <div class="ctrl-label">MELT SPEED <span class="ctrl-val" id="speedVal">1.0×</span></div>
+      <input type="range" id="speedRange" min="0.1" max="5" step="0.1" value="1.0">
+    </div>
+
+    <!-- DIRECTION -->
+    <div class="ctrl">
+      <div class="ctrl-label">DIRECTION</div>
+      <div class="seg-ctrl" id="dirSeg">
+        <button class="seg active" data-dir="down">DOWN</button>
+        <button class="seg" data-dir="up">UP</button>
+        <button class="seg" data-dir="mixed">MIXED</button>
+      </div>
+    </div>
+
+    <!-- BOUNCE -->
+    <div class="ctrl">
+      <div class="ctrl-label">BOUNCE</div>
+      <div class="toggle-row">
+        <div class="toggle-switch" id="bounceToggle"></div>
+        <span class="toggle-label" id="bounceLabel">OFF</span>
+      </div>
+      <div class="ctrl-sub" id="bounceRangeWrap" style="display:none;">
+        <div class="ctrl-label">RANGE <span class="ctrl-val" id="bounceRangeVal">50%</span></div>
+        <input type="range" id="bounceRangeSlider" min="5" max="100" step="1" value="50">
+        <div class="ctrl-hint-inline">SHORT ← → FULL</div>
+      </div>
+    </div>
+
+    <!-- LAYERED MELT -->
+    <div class="ctrl">
+      <div class="ctrl-label">LAYERED MELT</div>
+      <div class="toggle-row">
+        <div class="toggle-switch" id="layeredToggle"></div>
+        <span class="toggle-label" id="layeredLabel">OFF</span>
+      </div>
+      <div class="ctrl-hint" id="layeredHint" style="display:none; margin-top:8px; font-size:7px; letter-spacing:1px; color:rgba(255,255,255,0.18); line-height:1.6;">
+        BRIGHT → MID → DARK
+      </div>
+    </div>
+
+    <!-- MELT ZONE -->
+    <div class="ctrl">
+      <div class="ctrl-label" style="margin-bottom:4px;">MELT ZONE</div>
+      <div class="ctrl-sub">
+        <div class="ctrl-label">ORIGIN <span class="ctrl-val" id="originVal">35%</span></div>
+        <input type="range" id="originRange" min="0" max="95" step="1" value="35">
+        <div class="ctrl-hint-inline">0% = TOP &nbsp; 100% = BOTTOM</div>
+      </div>
+      <div class="ctrl-sub">
+        <div class="ctrl-label">SPREAD <span class="ctrl-val" id="spreadVal">40%</span></div>
+        <input type="range" id="spreadRange" min="0" max="100" step="1" value="40">
+      </div>
+      <div class="ctrl-sub">
+        <div class="ctrl-label">STRIP WIDTH <span class="ctrl-val" id="stripVal">30%</span></div>
+        <input type="range" id="stripRange" min="0" max="100" step="1" value="30">
+        <div class="ctrl-hint-inline">FINE ← → COARSE</div>
+      </div>
+      <div class="ctrl-sub" id="bandGapWrap" style="display:none;">
+        <div class="ctrl-label">BAND GAP <span class="ctrl-val" id="bandGapVal">50%</span></div>
+        <input type="range" id="bandGapRange" min="0" max="100" step="1" value="50">
+        <div class="ctrl-hint-inline">0 = ALL AT ONCE &nbsp; 100 = STAGGERED</div>
+      </div>
+    </div>
+
+    <!-- COLOR TONE PRESETS -->
+    <div class="ctrl">
+      <div class="ctrl-label">COLOR TONE</div>
+      <div class="presets" id="presetGrid"></div>
+    </div>
+
+    <!-- TINT STRENGTH -->
+    <div class="ctrl">
+      <div class="ctrl-label">TINT STRENGTH <span class="ctrl-val" id="tintVal">45%</span></div>
+      <input type="range" id="tintRange" min="0" max="100" step="1" value="45">
+    </div>
+
+    <!-- IMAGE ADJUST -->
+    <div class="ctrl">
+      <div class="ctrl-label" style="margin-bottom:4px;">IMAGE ADJUST</div>
+      <div class="ctrl-sub">
+        <div class="ctrl-label">SATURATION <span class="ctrl-val" id="satVal">100%</span></div>
+        <input type="range" id="satRange" min="0" max="250" step="1" value="100">
+      </div>
+      <div class="ctrl-sub">
+        <div class="ctrl-label">CONTRAST <span class="ctrl-val" id="conVal">100%</span></div>
+        <input type="range" id="conRange" min="0" max="250" step="1" value="100">
+      </div>
+    </div>
+
+    <!-- BACKGROUND TOGGLE -->
+    <div class="ctrl">
+      <div class="ctrl-label">BACKGROUND</div>
+      <div class="toggle-row">
+        <div class="toggle-switch on" id="bgToggle"></div>
+        <span class="toggle-label" id="bgToggleLabel">ON</span>
+      </div>
+    </div>
+
+    <!-- BG OPTIONS -->
+    <div class="ctrl sub-options visible" id="bgOptions">
+      <div class="seg-ctrl" id="bgModeSeg">
+        <button class="seg active" data-mode="solid">SOLID</button>
+        <button class="seg" data-mode="gradient">GRADIENT</button>
+        <button class="seg" data-mode="bw">B&W</button>
+      </div>
+      <!-- Solid color -->
+      <div id="bgSolidRow" class="color-row">
+        <div class="color-wrap"><label>COLOR</label><input type="color" id="bgColor1" value="#1e1e20"></div>
+      </div>
+      <!-- Gradient colors -->
+      <div id="bgGradRow" class="color-row" style="display:none;">
+        <div class="color-wrap"><label>TOP</label><input type="color" id="bgGradTop" value="#1a0a1e"></div>
+        <div class="color-wrap"><label>BOT</label><input type="color" id="bgGradBot" value="#0a1a1e"></div>
+      </div>
+      <!-- B&W -->
+      <div id="bgBwRow" class="bw-row" style="display:none;">
+        <div class="bw-btn active" data-bw="#000000" style="background:#000"></div>
+        <div class="bw-btn" data-bw="#0a0a0a" style="background:#0a0a0a"></div>
+        <div class="bw-btn" data-bw="#141414" style="background:#141414"></div>
+        <div class="bw-btn" data-bw="#e8e8e8" style="background:#e8e8e8"></div>
+        <div class="bw-btn" data-bw="#ffffff" style="background:#fff"></div>
+      </div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="ctrl-actions">
+      <button class="btn" id="resetBtn">↻ RESET</button>
+      <button class="btn" id="uploadBtn">+ IMAGE</button>
+    </div>
+    <div class="ctrl-actions" style="padding-top:0;">
+      <button class="btn" id="defaultsBtn" style="border-color:rgba(255,255,255,0.06);color:rgba(255,255,255,0.25);">⟲ DEFAULTS</button>
+    </div>
+    <div class="ctrl" style="border:none;padding:6px 18px;">
+      <div class="ctrl-hint-inline">SCROLL = ZOOM &nbsp;·&nbsp; DRAG = PAN</div>
+    </div>
+  </div>
+</div>
+<button id="panelToggle">◂</button>
+
+<canvas id="c"></canvas>
+
+<script>
+// ══════════════════════════════════════════════
+//  SETTINGS
+// ══════════════════════════════════════════════
+const settings = {
+  speedMult: 1.0,
+  tintStrength: 0.45,
+  colorPreset: 'ethereal',
+  bgEnabled: true,
+  bgMode: 'solid',       // solid | gradient | bw
+  bgSolid: '#1e1e20',
+  bgGradTop: '#1a0a1e',
+  bgGradBot: '#0a1a1e',
+  bgBw: '#000000',
+  layeredMelt: false,
+  meltOrigin: 35,      // % from top where melt boundary sits (0=top, 95=bottom)
+  meltSpread: 40,      // % random variation around origin
+  bandGap: 50,         // layered mode: gap between bands (0=simultaneous, 100=very staggered)
+  stripWidth: 30,      // 0=fine(1-2px), 100=coarse(10-30px)
+  direction: 'down',   // 'down' | 'up' | 'mixed'
+  bounce: false,
+  bounceRange: 50,     // 5-100%: how far pixels travel before bouncing back
+  saturation: 100,     // 0-250, 100=normal
+  contrast: 100,       // 0-250, 100=normal
+  zoom: 1.0,
+  panX: 0, panY: 0,
+};
+
+// Snapshot of defaults for reset
+const DEFAULT_SETTINGS = JSON.parse(JSON.stringify(settings));
+
+// ══════════════════════════════════════════════
+//  COLOR PRESETS
+// ══════════════════════════════════════════════
+const PRESETS = {
+  ethereal: {
+    label: 'ETHEREAL',
+    preview: 'linear-gradient(180deg,#a0bee0,#d2a0b4,#e1b49b,#d7d291,#beafc8)',
+    stops: [
+      { p:0.0,  c:[160,190,220,0]  },
+      { p:0.08, c:[160,190,220,15] },
+      { p:0.18, c:[210,160,180,56] },
+      { p:0.32, c:[225,180,155,71] },
+      { p:0.45, c:[215,210,145,56] },
+      { p:0.58, c:[190,175,200,41] },
+      { p:0.72, c:[160,160,155,20] },
+      { p:1.0,  c:[50,50,55,8]    },
+    ],
+    blobs: [
+      { x:.3, y:.3, r:.22, c:[220,150,175,46] },
+      { x:.65,y:.42,r:.18, c:[210,205,140,41] },
+      { x:.4, y:.52,r:.25, c:[155,185,215,26] },
+      { x:.7, y:.28,r:.16, c:[225,175,150,41] },
+      { x:.2, y:.45,r:.20, c:[200,165,200,31] },
+    ],
+  },
+  arctic: {
+    label: 'ARCTIC',
+    preview: 'linear-gradient(180deg,#4a90c8,#70b8d8,#a0dce8,#c8eaf0,#90b8d0)',
+    stops: [
+      { p:0.0,  c:[60,120,180,0]  },
+      { p:0.1,  c:[70,140,200,20] },
+      { p:0.25, c:[100,180,220,50] },
+      { p:0.4,  c:[140,210,235,60] },
+      { p:0.55, c:[160,220,240,45] },
+      { p:0.7,  c:[120,190,215,30] },
+      { p:0.85, c:[80,140,170,15] },
+      { p:1.0,  c:[40,60,80,5]    },
+    ],
+    blobs: [
+      { x:.35,y:.3, r:.25, c:[80,180,230,40] },
+      { x:.6, y:.5, r:.20, c:[130,210,240,35] },
+      { x:.25,y:.55,r:.18, c:[100,160,200,30] },
+      { x:.7, y:.35,r:.15, c:[160,225,245,25] },
+    ],
+  },
+  ember: {
+    label: 'EMBER',
+    preview: 'linear-gradient(180deg,#e85030,#e87830,#d84880,#c83060,#a02848)',
+    stops: [
+      { p:0.0,  c:[200,60,30,0]   },
+      { p:0.1,  c:[220,80,40,20]  },
+      { p:0.22, c:[235,120,50,55] },
+      { p:0.38, c:[225,90,60,65]  },
+      { p:0.52, c:[210,60,90,50]  },
+      { p:0.66, c:[180,50,80,35]  },
+      { p:0.8,  c:[140,40,60,18]  },
+      { p:1.0,  c:[60,20,25,5]    },
+    ],
+    blobs: [
+      { x:.4, y:.3, r:.22, c:[240,100,50,45] },
+      { x:.6, y:.45,r:.20, c:[220,70,80,40] },
+      { x:.3, y:.55,r:.18, c:[200,50,100,30] },
+      { x:.7, y:.3, r:.15, c:[250,140,60,35] },
+    ],
+  },
+  neon: {
+    label: 'NEON',
+    preview: 'linear-gradient(180deg,#e040e0,#40c0e0,#40e080,#e0e040,#e040a0)',
+    stops: [
+      { p:0.0,  c:[200,50,200,0]  },
+      { p:0.1,  c:[220,60,210,20] },
+      { p:0.22, c:[60,190,230,55] },
+      { p:0.38, c:[60,225,130,60] },
+      { p:0.52, c:[220,220,60,45] },
+      { p:0.66, c:[225,60,160,40] },
+      { p:0.8,  c:[160,60,200,20] },
+      { p:1.0,  c:[40,20,50,5]    },
+    ],
+    blobs: [
+      { x:.3, y:.3, r:.22, c:[230,60,220,45] },
+      { x:.65,y:.4, r:.20, c:[60,200,240,40] },
+      { x:.4, y:.55,r:.18, c:[60,240,120,35] },
+      { x:.7, y:.55,r:.16, c:[240,240,60,30] },
+    ],
+  },
+  sunset: {
+    label: 'SUNSET',
+    preview: 'linear-gradient(180deg,#ff7e5f,#feb47b,#ff6b81,#c56090,#8060a0)',
+    stops: [
+      { p:0.0,  c:[255,120,90,0]  },
+      { p:0.1,  c:[255,130,95,18] },
+      { p:0.22, c:[255,180,120,50]},
+      { p:0.38, c:[255,160,100,60]},
+      { p:0.52, c:[255,100,130,50]},
+      { p:0.66, c:[200,95,145,38] },
+      { p:0.8,  c:[130,95,160,20] },
+      { p:1.0,  c:[50,30,55,5]    },
+    ],
+    blobs: [
+      { x:.35,y:.3, r:.24, c:[255,160,110,42] },
+      { x:.6, y:.45,r:.20, c:[255,110,130,38] },
+      { x:.25,y:.5, r:.18, c:[200,100,150,30] },
+      { x:.7, y:.3, r:.16, c:[255,190,130,35] },
+    ],
+  },
+  void: {
+    label: 'VOID',
+    preview: 'linear-gradient(180deg,#333,#1a1a1a,#111)',
+    stops: [],
+    blobs: [],
+  },
+};
+
+// ══════════════════════════════════════════════
+//  DOM
+// ══════════════════════════════════════════════
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const loader = document.getElementById('loader');
+const fileInput = document.getElementById('fileInput');
+const panel = document.getElementById('panel');
+const panelToggle = document.getElementById('panelToggle');
+
+// ══════════════════════════════════════════════
+//  ENGINE STATE
+// ══════════════════════════════════════════════
+let imgW, imgH, srcPixels;
+let colTop, colBot, colLum;  // colLum: per-column average luminance 0~1
+let meltStartY, meltDist, meltSpeed, meltMax, meltDelay, meltDir; // meltDir: +1=down, -1=up
+let running = false;
+let accumTime = 0, lastFrameTime = 0;
+let bufCanvas, bufCtx, bufH, bufYOff, bufImageData, bufClearArr;
+let colorOvrPixels;
+let currentImg = null;
+
+// ══════════════════════════════════════════════
+//  IMAGE LOADING
+// ══════════════════════════════════════════════
+function handleImage(file) {
+  const r = new FileReader();
+  r.onload = e => { const img = new Image(); img.onload = () => init(img); img.src = e.target.result; };
+  r.readAsDataURL(file);
+}
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleImage(e.target.files[0]); });
+loader.addEventListener('dragover', e => e.preventDefault());
+loader.addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files[0]) handleImage(e.dataTransfer.files[0]); });
+
+// Also accept drops on canvas
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files[0]) handleImage(e.dataTransfer.files[0]); });
+
+// Auto-load
+{ const img = new Image(); img.onload = () => init(img);
+  img.onerror = () => { const i2 = new Image(); i2.onload = () => init(i2); i2.src = 'david.png'; };
+  img.src = 'david.jpg'; }
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+function init(img) {
+  loader.classList.add('hidden');
+  currentImg = img;
+
+  const vw = window.innerWidth, vh = window.innerHeight;
+  canvas.width = vw; canvas.height = vh;
+
+  const drawH = Math.floor(vh * 0.88);
+  const drawW = Math.floor(drawH * (img.width / img.height));
+  imgW = drawW; imgH = drawH;
+
+  const srcCanvas = document.createElement('canvas');
+  srcCanvas.width = imgW; srcCanvas.height = imgH;
+  const srcCtx = srcCanvas.getContext('2d', { willReadFrequently: true });
+  srcCtx.drawImage(img, 0, 0, imgW, imgH);
+
+  let imgData = srcCtx.getImageData(0, 0, imgW, imgH);
+  let px = imgData.data;
+
+  // Detect background
+  let bgR=0,bgG=0,bgB=0,bgA=0,cnt=0;
+  for (let y=0; y<imgH; y+=Math.max(1,Math.floor(imgH/20))) {
+    for (const x of [0,1,2,imgW-3,imgW-2,imgW-1]) {
+      const i=(y*imgW+x)*4;
+      bgR+=px[i]; bgG+=px[i+1]; bgB+=px[i+2]; bgA+=px[i+3]; cnt++;
+    }
+  }
+  bgR/=cnt; bgG/=cnt; bgB/=cnt; bgA/=cnt;
+  const isLightBg = bgA>=200 && (bgR+bgG+bgB)/3>150;
+
+  if (isLightBg) {
+    for (let i=0;i<px.length;i+=4) {
+      const dr=px[i]-bgR,dg=px[i+1]-bgG,db=px[i+2]-bgB;
+      const dist=Math.sqrt(dr*dr+dg*dg+db*db);
+      if (dist<55) {
+        const f=Math.max(0,dist/55);
+        px[i]=Math.round(30*(1-f)+px[i]*f);
+        px[i+1]=Math.round(30*(1-f)+px[i+1]*f);
+        px[i+2]=Math.round(32*(1-f)+px[i+2]*f);
+        px[i+3]=Math.round(px[i+3]*f*f);
+      }
+    }
+    srcCtx.putImageData(imgData,0,0);
+  }
+
+  // Cool tint
+  imgData = srcCtx.getImageData(0,0,imgW,imgH);
+  px = imgData.data;
+  for (let i=0;i<px.length;i+=4) {
+    if (px[i+3]<15) continue;
+    const lum=(px[i]*0.299+px[i+1]*0.587+px[i+2]*0.114)/255;
+    px[i]=Math.min(255,Math.round(px[i]*0.82+lum*38));
+    px[i+1]=Math.min(255,Math.round(px[i+1]*0.88+lum*28));
+    px[i+2]=Math.min(255,Math.round(px[i+2]*0.85+lum*52));
+  }
+  srcCtx.putImageData(imgData,0,0);
+  srcPixels = srcCtx.getImageData(0,0,imgW,imgH).data;
+
+  // Buffer
+  // Buffer with room ABOVE (for UP float) and BELOW (for DOWN melt)
+  bufYOff = Math.ceil(imgH * 1.0);         // room above row 0
+  bufH = bufYOff + Math.ceil(imgH * 2.2);  // total buffer height
+  bufCanvas = document.createElement('canvas');
+  bufCanvas.width = imgW; bufCanvas.height = bufH;
+  bufCtx = bufCanvas.getContext('2d', { willReadFrequently: true });
+  // Pre-allocate reusable buffer (avoids GC pressure from new ImageData every frame)
+  bufImageData = bufCtx.createImageData(imgW, bufH);
+  // Uint32 view for fast zeroing
+  bufClearArr = new Uint32Array(bufImageData.data.buffer);
+
+  // Column bounds
+  colTop = new Int32Array(imgW);
+  colBot = new Int32Array(imgW);
+  for (let x=0;x<imgW;x++) {
+    let top=-1, bot=-1;
+    for (let y=0;y<imgH;y++) {
+      if (srcPixels[(y*imgW+x)*4+3]>20) { if(top<0) top=y; bot=y; }
+    }
+    colTop[x]=top; colBot[x]=bot;
+  }
+
+  // Per-column average luminance (for layered melt)
+  colLum = new Float32Array(imgW);
+  for (let x=0;x<imgW;x++) {
+    const top=colTop[x], bot=colBot[x];
+    if (top<0) { colLum[x]=0; continue; }
+    let lumSum=0, cnt=0;
+    for (let y=top;y<=bot;y++) {
+      const si=(y*imgW+x)*4;
+      if (srcPixels[si+3]<20) continue;
+      lumSum += srcPixels[si]*0.299 + srcPixels[si+1]*0.587 + srcPixels[si+2]*0.114;
+      cnt++;
+    }
+    colLum[x] = cnt>0 ? (lumSum/cnt)/255 : 0;
+  }
+
+  buildColorOverlay();
+  initMeltState();
+  running = true;
+  lastFrameTime = performance.now();
+  requestAnimationFrame(animate);
+}
+
+// ══════════════════════════════════════════════
+//  BUILD COLOR OVERLAY
+// ══════════════════════════════════════════════
+function buildColorOverlay() {
+  if (!imgW) return;
+  const preset = PRESETS[settings.colorPreset];
+  if (!preset || preset.stops.length === 0) {
+    colorOvrPixels = new Uint8ClampedArray(imgW * bufH * 4); // all zeros
+    return;
+  }
+
+  const ovr = document.createElement('canvas');
+  ovr.width = imgW; ovr.height = bufH;
+  const oc = ovr.getContext('2d');
+
+  const grd = oc.createLinearGradient(0,0,0,bufH);
+  for (const s of preset.stops) {
+    grd.addColorStop(s.p, `rgba(${s.c[0]},${s.c[1]},${s.c[2]},${(s.c[3]/255).toFixed(3)})`);
+  }
+  oc.fillStyle = grd;
+  oc.fillRect(0,0,imgW,bufH);
+
+  for (const b of (preset.blobs||[])) {
+    const bx=imgW*b.x, by=bufH*b.y, br=bufH*b.r;
+    const g2 = oc.createRadialGradient(bx,by,0,bx,by,br);
+    g2.addColorStop(0, `rgba(${b.c[0]},${b.c[1]},${b.c[2]},${(b.c[3]/255).toFixed(3)})`);
+    g2.addColorStop(1, `rgba(${b.c[0]},${b.c[1]},${b.c[2]},0)`);
+    oc.fillStyle = g2;
+    oc.fillRect(0,0,imgW,bufH);
+  }
+
+  colorOvrPixels = oc.getImageData(0,0,imgW,bufH).data;
+}
+
+// ══════════════════════════════════════════════
+//  INIT MELT STATE
+// ══════════════════════════════════════════════
+function initMeltState() {
+  accumTime = 0;
+
+  meltStartY = new Float32Array(imgW);
+  meltDist   = new Float32Array(imgW);
+  meltSpeed  = new Float32Array(imgW);
+  meltMax    = new Float32Array(imgW);
+  meltDelay  = new Float32Array(imgW);
+  meltDir    = new Int8Array(imgW);  // +1=down, -1=up
+
+  const layered = settings.layeredMelt;
+  const dir = settings.direction;
+
+  // ── Read user settings ──
+  const originPct = settings.meltOrigin / 100;
+  const spreadPct = settings.meltSpread / 100;
+  const spreadAmt = spreadPct * 0.35;
+
+  // ── Layered mode: normalize luminance ──
+  let lumMin = 1, lumMax = 0;
+  if (layered) {
+    for (let x=0;x<imgW;x++) {
+      if (colTop[x]<0) continue;
+      if (colLum[x] < lumMin) lumMin = colLum[x];
+      if (colLum[x] > lumMax) lumMax = colLum[x];
+    }
+    if (lumMax - lumMin < 0.01) { lumMin = 0; lumMax = 1; }
+  }
+  const lumRange = lumMax - lumMin;
+
+  const NUM_BANDS = 5;
+  const gapScale = settings.bandGap / 50;
+  const BAND_BASE_DELAY = [100, 2200, 4500, 7000, 10000].map(d => d * gapScale);
+  const BAND_DELAY_RAND = [400, 600, 700, 800, 600].map(d => d * gapScale);
+
+  for (let x=0;x<imgW;x++) {
+    const top=colTop[x], bot=colBot[x];
+    if (top<0||bot-top<5) { meltDelay[x]=999999; continue; }
+    const contentH=bot-top;
+
+    // ── Direction ──
+    if (dir === 'up') meltDir[x] = -1;
+    else if (dir === 'down') meltDir[x] = 1;
+    else meltDir[x] = Math.random() < 0.5 ? 1 : -1; // mixed
+
+    // ── Compute melt start row from ORIGIN + SPREAD ──
+    const rand = (Math.random() * 2 - 1) * spreadAmt;
+    const startRatio = Math.max(0.02, Math.min(0.95, originPct + rand));
+
+    if (meltDir[x] === 1) {
+      // DOWN: melt boundary is startRatio from top, stuff below falls
+      meltStartY[x] = top + contentH * startRatio;
+      meltMax[x] = (bot - meltStartY[x]) * 1.5 + 60 + Math.random() * 250;
+    } else {
+      // UP: melt boundary is (1-startRatio) from top, stuff above floats up
+      meltStartY[x] = top + contentH * (1 - startRatio);
+      meltMax[x] = (meltStartY[x] - top) * 1.5 + 60 + Math.random() * 250;
+    }
+
+    meltSpeed[x] = 0.015 + Math.random() * 0.04;
+
+    if (layered) {
+      const normLum = (colLum[x] - lumMin) / lumRange;
+      let band = Math.floor((1 - normLum) * NUM_BANDS);
+      if (band >= NUM_BANDS) band = NUM_BANDS - 1;
+      if (band < 0) band = 0;
+      meltDelay[x] = BAND_BASE_DELAY[band] + Math.random() * BAND_DELAY_RAND[band];
+      meltSpeed[x] = 0.025 + normLum * 0.025 + Math.random() * 0.02;
+    } else {
+      meltDelay[x] = 200 + Math.random() * 4000;
+    }
+  }
+
+  // ── Column grouping (normal mode only) ──
+  if (!layered) {
+    for (let g=0;g<80;g++) {
+      const start=Math.floor(Math.random()*imgW);
+      const span=2+Math.floor(Math.random()*10);
+      const gDelay=100+Math.random()*3500;
+      const gSpeed=0.015+Math.random()*0.05;
+      for (let j=start;j<Math.min(start+span,imgW);j++) {
+        if (meltDelay[j]>=999990) continue;
+        meltDelay[j]=gDelay; meltSpeed[j]=gSpeed;
+      }
+    }
+  } else {
+    const tmpDelay = new Float32Array(meltDelay);
+    const tmpSpeed = new Float32Array(meltSpeed);
+    for (let x=1;x<imgW-1;x++) {
+      if (meltDelay[x]>=999990) continue;
+      let dSum=0, sSum=0, cnt=0;
+      for (let dx=-1;dx<=1;dx++) {
+        const nx=x+dx;
+        if (nx>=0&&nx<imgW&&meltDelay[nx]<999990) {
+          dSum+=tmpDelay[nx]; sSum+=tmpSpeed[nx]; cnt++;
+        }
+      }
+      if (cnt>0) {
+        meltDelay[x] = meltDelay[x]*0.6 + (dSum/cnt)*0.4;
+        meltSpeed[x] = meltSpeed[x]*0.6 + (sSum/cnt)*0.4;
+      }
+    }
+  }
+
+  // ── Strip width grouping — probability-biased distribution ──
+  // Slider sets the PEAK of the distribution, but all sizes 1~35 remain possible.
+  // Uses a weighted random: draw from full range, but bias toward the peak.
+  const sw = settings.stripWidth / 100;  // 0~1
+  if (sw > 0.01) {
+    const peak = 1 + sw * 30;  // preferred width: 1~31
+
+    let cx = 0;
+    while (cx < imgW) {
+      // Draw multiple random samples, average them → clusters around peak
+      // Then mix with a uniform draw for variety
+      const r1 = 1 + Math.random() * 34;  // uniform 1~35
+      const r2 = Math.max(1, peak + (Math.random()-0.5) * 12); // gaussian-ish around peak
+      const r3 = Math.max(1, peak + (Math.random()-0.5) * 12);
+      // 70% biased toward peak, 30% fully random for variety
+      const w = Math.round(Math.random() < 0.3 ? r1 : (r2 + r3) / 2);
+      const clamped = Math.max(1, Math.min(35, w));
+      const end = Math.min(cx + clamped, imgW);
+
+      let ld = -1;
+      for (let x = cx; x < end; x++) {
+        if (meltDelay[x] < 999990) { ld = x; break; }
+      }
+      if (ld >= 0) {
+        const ldStart = meltStartY[ld], ldSpd = meltSpeed[ld];
+        const ldDel = meltDelay[ld], ldMax = meltMax[ld];
+        const ldDir = meltDir[ld];
+        for (let x = cx; x < end; x++) {
+          if (meltDelay[x] >= 999990) continue;
+          meltStartY[x] = ldStart;
+          meltSpeed[x]  = ldSpd;
+          meltDelay[x]  = ldDel;
+          meltMax[x]    = ldMax;
+          meltDir[x]    = ldDir;
+        }
+      }
+      cx = end;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════
+//  ANIMATION
+// ══════════════════════════════════════════════
+function animate(time) {
+  if (!running) return;
+  requestAnimationFrame(animate);
+
+  const dt = time - lastFrameTime;
+  lastFrameTime = time;
+  accumTime += dt * settings.speedMult;
+
+  draw();
+}
+
+function getPanelOffset() {
+  return panel.classList.contains('collapsed') ? 0 : 260;
+}
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return [r,g,b];
+}
+
+function draw() {
+  const cw = canvas.width, ch = canvas.height;
+
+  // ── Update melt distances ──
+  const doBounce = settings.bounce;
+  for (let x=0;x<imgW;x++) {
+    if (meltDelay[x]>=999990||accumTime<meltDelay[x]) { meltDist[x]=0; continue; }
+    const t=accumTime-meltDelay[x];
+    const grow=meltSpeed[x]*t*0.008;
+    const grav=0.000006*t*t*0.0003;
+    const raw=grow+grav;
+    const wave=Math.sin(t*0.00025+x*0.08)*2.5;
+
+    if (doBounce) {
+      // Triangle wave: 0 → range → 0 → range → ...
+      // Use only linear growth (no gravity) so bounce speed stays constant
+      const mx = meltMax[x] * (settings.bounceRange / 100);
+      const cycle = grow / Math.max(1, mx);
+      const phase = cycle % 2;
+      const tri = phase < 1 ? phase : 2 - phase; // 0→1→0
+      const smooth = (Math.sin((tri - 0.5) * Math.PI) + 1) / 2;
+      meltDist[x] = Math.max(0, smooth * mx + wave);
+    } else {
+      meltDist[x]=Math.max(0, Math.min(raw, meltMax[x]) + wave);
+    }
+  }
+
+  // ── Per-pixel buffer (reuse pre-allocated, fast zero) ──
+  bufClearArr.fill(0); // ~1ms for 4MB via Uint32, much faster than new ImageData
+  const dst = bufImageData.data;
+  const src = srcPixels;
+  const off = bufYOff;
+  let dirtyMinY = bufH, dirtyMaxY = 0; // track written rows for tint/sat scope
+
+  for (let x=0;x<imgW;x++) {
+    const top=colTop[x], bot=colBot[x];
+    if (top<0) continue;
+    const dist=meltDist[x], msY=meltStartY[x];
+    const goUp = meltDir[x] < 0;
+
+    // No melt yet — straight copy (with offset)
+    if (dist<0.5) {
+      const yMin=top+off, yMax=bot+off;
+      if (yMin<dirtyMinY) dirtyMinY=yMin;
+      if (yMax>dirtyMaxY) dirtyMaxY=yMax;
+      for (let y=top;y<=bot;y++) {
+        const si=(y*imgW+x)*4;
+        if (src[si+3]<5) continue;
+        const di=((y+off)*imgW+x)*4;
+        dst[di]=src[si]; dst[di+1]=src[si+1]; dst[di+2]=src[si+2]; dst[di+3]=src[si+3];
+      }
+      continue;
+    }
+
+    if (!goUp) {
+      // ════ DOWN: stable above msY, displace below ════
+      for (let y=top;y<=Math.min(Math.floor(msY),bot);y++) {
+        const si=(y*imgW+x)*4;
+        if (src[si+3]<5) continue;
+        const di=((y+off)*imgW+x)*4;
+        dst[di]=src[si]; dst[di+1]=src[si+1]; dst[di+2]=src[si+2]; dst[di+3]=src[si+3];
+      }
+      const meltTop=Math.max(Math.floor(msY),top), meltBot=bot;
+      const meltRange=Math.max(1,meltBot-msY);
+      let prevBY=-1, pR=0,pG=0,pB=0,pA=0;
+      for (let srcY=meltTop;srcY<=meltBot;srcY++) {
+        const si=(srcY*imgW+x)*4;
+        const sR=src[si],sG=src[si+1],sB=src[si+2],sA=src[si+3];
+        let t=(srcY-msY)/meltRange; if(t<0)t=0; if(t>1)t=1; t*=t;
+        const by=srcY+off+Math.round(t*dist); // buffer Y
+        if (by>=bufH) break;
+        if (prevBY>=0&&by>prevBY+1) {
+          const gap=by-prevBY;
+          for (let gy=prevBY+1;gy<by&&gy<bufH;gy++) {
+            const bl=(gy-prevBY)/gap, di=(gy*imgW+x)*4;
+            dst[di]=Math.round(pR*(1-bl)+sR*bl); dst[di+1]=Math.round(pG*(1-bl)+sG*bl);
+            dst[di+2]=Math.round(pB*(1-bl)+sB*bl); dst[di+3]=Math.round(pA*(1-bl)+sA*bl);
+          }
+        }
+        if (by>=0&&by<bufH) { const di=(by*imgW+x)*4; dst[di]=sR; dst[di+1]=sG; dst[di+2]=sB; dst[di+3]=sA; }
+        prevBY=by; pR=sR; pG=sG; pB=sB; pA=sA;
+      }
+      if (dist>5&&prevBY>=0) {
+        const tl=Math.round(dist*1.5), segs=Math.min(tl,120);
+        for (let s=1;s<=segs;s++) { const ty=prevBY+s; if(ty>=bufH)break; const fade=1-s/segs, a=fade*fade*0.35; if(a<0.004)break; const di=(ty*imgW+x)*4; if(dst[di+3]<Math.round(pA*a)){dst[di]=pR;dst[di+1]=pG;dst[di+2]=pB;dst[di+3]=Math.round(pA*a);} if(ty>dirtyMaxY)dirtyMaxY=ty; }
+      }
+      { const yMin=top+off; if(yMin<dirtyMinY)dirtyMinY=yMin; if(prevBY>dirtyMaxY)dirtyMaxY=prevBY; }
+    } else {
+      // ════ UP: entire column floats, no hard boundary ════
+      const contentH2 = Math.max(1, bot - top);
+      const normMsY = Math.max(0.1, (msY - top) / contentH2);
+      const curvePow = 0.8 + normMsY * 2.2;
+
+      let prevBY = -1, pR=0,pG=0,pB=0,pA=0;
+      for (let srcY = bot; srcY >= top; srcY--) {
+        const si=(srcY*imgW+x)*4;
+        const sR=src[si],sG=src[si+1],sB=src[si+2],sA=src[si+3];
+        let t = (bot - srcY) / contentH2;
+        t = Math.pow(t, curvePow);
+        const by = srcY + off - Math.round(t * dist); // buffer Y (can go into offset zone)
+        if (by < 0) break;
+
+        if (prevBY>=0&&by<prevBY-1) {
+          const gap=prevBY-by;
+          for (let gy=prevBY-1;gy>by&&gy>=0;gy--) {
+            const bl=(prevBY-gy)/gap, di=(gy*imgW+x)*4;
+            dst[di]=Math.round(pR*(1-bl)+sR*bl); dst[di+1]=Math.round(pG*(1-bl)+sG*bl);
+            dst[di+2]=Math.round(pB*(1-bl)+sB*bl); dst[di+3]=Math.round(pA*(1-bl)+sA*bl);
+          }
+        }
+        if (by>=0&&by<bufH) { const di=(by*imgW+x)*4; dst[di]=sR; dst[di+1]=sG; dst[di+2]=sB; dst[di+3]=sA; }
+        prevBY=by; pR=sR; pG=sG; pB=sB; pA=sA;
+      }
+      if (dist>5&&prevBY>=0) {
+        const tl=Math.round(dist*1.5), segs=Math.min(tl,120);
+        for (let s=1;s<=segs;s++) { const ty=prevBY-s; if(ty<0)break; const fade=1-s/segs, a=fade*fade*0.35; if(a<0.004)break; const di=(ty*imgW+x)*4; if(dst[di+3]<Math.round(pA*a)){dst[di]=pR;dst[di+1]=pG;dst[di+2]=pB;dst[di+3]=Math.round(pA*a);} if(ty<dirtyMinY)dirtyMinY=ty; }
+      }
+      { const yMax=bot+off; if(yMax>dirtyMaxY)dirtyMaxY=yMax; if(prevBY>=0&&prevBY<dirtyMinY)dirtyMinY=prevBY; }
+    }
+  }
+
+  // ── Pixel-level color tint (only dirty rows) ──
+  const cPx = colorOvrPixels;
+  const tStr = settings.tintStrength;
+  const dMinI = Math.max(0, dirtyMinY) * imgW * 4;
+  const dMaxI = Math.min(bufH, dirtyMaxY + 1) * imgW * 4;
+  if (cPx && tStr > 0.001) {
+    for (let i=dMinI;i<dMaxI;i+=4) {
+      if (dst[i+3]<8) continue;
+      const cR=cPx[i],cG=cPx[i+1],cB=cPx[i+2],cA=cPx[i+3];
+      if (cA<2) continue;
+
+      const strength=(cA/255)*tStr;
+      const bR=dst[i],bG=dst[i+1],bB=dst[i+2];
+      let rR=bR+(cR-bR)*strength, rG=bG+(cG-bG)*strength, rB=bB+(cB-bB)*strength;
+
+      const sl=0.35;
+      const nr=rR/255,ng=rG/255,nb=rB/255;
+      const cr=cR/255,cg=cG/255,cb=cB/255;
+      const slR=cr<=.5?nr-(1-2*cr)*nr*(1-nr):nr+(2*cr-1)*(Math.sqrt(nr)-nr);
+      const slG=cg<=.5?ng-(1-2*cg)*ng*(1-ng):ng+(2*cg-1)*(Math.sqrt(ng)-ng);
+      const slB=cb<=.5?nb-(1-2*cb)*nb*(1-nb):nb+(2*cb-1)*(Math.sqrt(nb)-nb);
+
+      dst[i]=Math.min(255,Math.max(0,Math.round(rR*(1-sl)+slR*255*sl)));
+      dst[i+1]=Math.min(255,Math.max(0,Math.round(rG*(1-sl)+slG*255*sl)));
+      dst[i+2]=Math.min(255,Math.max(0,Math.round(rB*(1-sl)+slB*255*sl)));
+    }
+  }
+
+  // ── Saturation & Contrast (pixel-level) ──
+  const sat = settings.saturation / 100;   // 1.0 = normal
+  const con = settings.contrast / 100;     // 1.0 = normal
+  const needsSatCon = Math.abs(sat - 1) > 0.01 || Math.abs(con - 1) > 0.01;
+  if (needsSatCon) {
+    for (let i=dMinI;i<dMaxI;i+=4) {
+      if (dst[i+3]<8) continue;
+      let r=dst[i], g=dst[i+1], b=dst[i+2];
+      // Saturation
+      if (Math.abs(sat-1) > 0.01) {
+        const gray = 0.299*r + 0.587*g + 0.114*b;
+        r = gray + (r - gray) * sat;
+        g = gray + (g - gray) * sat;
+        b = gray + (b - gray) * sat;
+      }
+      // Contrast
+      if (Math.abs(con-1) > 0.01) {
+        r = 128 + (r - 128) * con;
+        g = 128 + (g - 128) * con;
+        b = 128 + (b - 128) * con;
+      }
+      dst[i]   = Math.min(255, Math.max(0, Math.round(r)));
+      dst[i+1] = Math.min(255, Math.max(0, Math.round(g)));
+      dst[i+2] = Math.min(255, Math.max(0, Math.round(b)));
+    }
+  }
+
+  // Only put the dirty region to the buffer canvas
+  const dY0 = Math.max(0, dirtyMinY);
+  const dY1 = Math.min(bufH, dirtyMaxY + 1);
+  bufCtx.clearRect(0, 0, imgW, bufH);
+  if (dY1 > dY0) bufCtx.putImageData(bufImageData, 0, 0, 0, dY0, imgW, dY1 - dY0);
+
+  // ── Draw background ──
+  const pw = getPanelOffset();
+  if (settings.bgEnabled) {
+    if (settings.bgMode === 'gradient') {
+      const grd = ctx.createLinearGradient(0,0,0,ch);
+      grd.addColorStop(0, settings.bgGradTop);
+      grd.addColorStop(1, settings.bgGradBot);
+      ctx.fillStyle = grd;
+    } else if (settings.bgMode === 'bw') {
+      ctx.fillStyle = settings.bgBw;
+    } else {
+      ctx.fillStyle = settings.bgSolid;
+    }
+  } else {
+    ctx.fillStyle = '#0a0a0c';
+  }
+  ctx.fillRect(0,0,cw,ch);
+
+  // ── Draw melt with zoom & pan ──
+  // Buffer row `bufYOff` = image row 0, so canvas Y shifts up by bufYOff
+  const imgDstX = pw + Math.floor((cw - pw - imgW) / 2);
+  const imgDstY = Math.floor(ch * 0.04) - bufYOff; // shift up so offset zone is above canvas
+  const baseX = pw + (cw - pw) / 2;
+  const baseY = Math.floor(ch * 0.04) + imgH / 2; // pivot around image center (not buffer center)
+  const z = settings.zoom;
+
+  ctx.save();
+  ctx.translate(baseX + settings.panX, baseY + settings.panY);
+  ctx.scale(z, z);
+  ctx.translate(-baseX, -baseY);
+  ctx.drawImage(bufCanvas, 0, 0, imgW, bufH, imgDstX, imgDstY, imgW, bufH);
+  ctx.restore();
+
+  // ── Vignette ──
+  const vig = ctx.createRadialGradient(cw/2,ch*0.35,ch*0.2,cw/2,ch*0.5,ch*0.85);
+  vig.addColorStop(0,'rgba(0,0,0,0)');
+  vig.addColorStop(1,'rgba(0,0,0,0.35)');
+  ctx.fillStyle = vig;
+  ctx.fillRect(0,0,cw,ch);
+}
+
+// ══════════════════════════════════════════════
+//  PANEL CONTROLS
+// ══════════════════════════════════════════════
+
+// Panel toggle
+panelToggle.onclick = () => {
+  panel.classList.toggle('collapsed');
+  panelToggle.textContent = panel.classList.contains('collapsed') ? '▸' : '◂';
+};
+
+// Speed
+const speedRange = document.getElementById('speedRange');
+const speedVal = document.getElementById('speedVal');
+speedRange.oninput = () => {
+  settings.speedMult = parseFloat(speedRange.value);
+  speedVal.textContent = settings.speedMult.toFixed(1) + '×';
+};
+
+// Direction
+const dirSeg = document.getElementById('dirSeg');
+dirSeg.querySelectorAll('.seg').forEach(btn => {
+  btn.onclick = () => {
+    dirSeg.querySelectorAll('.seg').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    settings.direction = btn.dataset.dir;
+    if (currentImg) { initMeltState(); lastFrameTime = performance.now(); }
+  };
+});
+
+// Bounce
+const bounceToggle = document.getElementById('bounceToggle');
+const bounceLabel = document.getElementById('bounceLabel');
+const bounceRangeWrap = document.getElementById('bounceRangeWrap');
+const bounceRangeSlider = document.getElementById('bounceRangeSlider');
+const bounceRangeVal = document.getElementById('bounceRangeVal');
+bounceToggle.onclick = () => {
+  settings.bounce = !settings.bounce;
+  bounceToggle.classList.toggle('on', settings.bounce);
+  bounceLabel.textContent = settings.bounce ? 'ON' : 'OFF';
+  bounceRangeWrap.style.display = settings.bounce ? 'block' : 'none';
+};
+bounceRangeSlider.oninput = () => {
+  settings.bounceRange = parseInt(bounceRangeSlider.value);
+  bounceRangeVal.textContent = settings.bounceRange + '%';
+};
+
+// Layered melt
+const layeredToggle = document.getElementById('layeredToggle');
+const layeredLabel = document.getElementById('layeredLabel');
+const layeredHint = document.getElementById('layeredHint');
+const bandGapWrap = document.getElementById('bandGapWrap');
+layeredToggle.onclick = () => {
+  settings.layeredMelt = !settings.layeredMelt;
+  layeredToggle.classList.toggle('on', settings.layeredMelt);
+  layeredLabel.textContent = settings.layeredMelt ? 'ON' : 'OFF';
+  layeredHint.style.display = settings.layeredMelt ? 'block' : 'none';
+  bandGapWrap.style.display = settings.layeredMelt ? 'block' : 'none';
+  if (currentImg) { initMeltState(); lastFrameTime = performance.now(); }
+};
+
+// Melt zone: Origin
+const originRange = document.getElementById('originRange');
+const originVal = document.getElementById('originVal');
+originRange.oninput = () => {
+  settings.meltOrigin = parseInt(originRange.value);
+  originVal.textContent = settings.meltOrigin + '%';
+  if (currentImg) { initMeltState(); lastFrameTime = performance.now(); }
+};
+
+// Melt zone: Spread
+const spreadRange = document.getElementById('spreadRange');
+const spreadVal = document.getElementById('spreadVal');
+spreadRange.oninput = () => {
+  settings.meltSpread = parseInt(spreadRange.value);
+  spreadVal.textContent = settings.meltSpread + '%';
+  if (currentImg) { initMeltState(); lastFrameTime = performance.now(); }
+};
+
+// Melt zone: Strip Width
+const stripRange = document.getElementById('stripRange');
+const stripVal = document.getElementById('stripVal');
+stripRange.oninput = () => {
+  settings.stripWidth = parseInt(stripRange.value);
+  stripVal.textContent = settings.stripWidth + '%';
+  if (currentImg) { initMeltState(); lastFrameTime = performance.now(); }
+};
+
+// Melt zone: Band Gap (layered only)
+const bandGapRange = document.getElementById('bandGapRange');
+const bandGapVal = document.getElementById('bandGapVal');
+bandGapRange.oninput = () => {
+  settings.bandGap = parseInt(bandGapRange.value);
+  bandGapVal.textContent = settings.bandGap + '%';
+  if (currentImg) { initMeltState(); lastFrameTime = performance.now(); }
+};
+
+// Tint strength
+const tintRange = document.getElementById('tintRange');
+const tintVal = document.getElementById('tintVal');
+tintRange.oninput = () => {
+  settings.tintStrength = parseInt(tintRange.value) / 100;
+  tintVal.textContent = parseInt(tintRange.value) + '%';
+};
+
+// Presets
+const presetGrid = document.getElementById('presetGrid');
+for (const [key, preset] of Object.entries(PRESETS)) {
+  const sw = document.createElement('div');
+  sw.className = 'swatch' + (key === settings.colorPreset ? ' active' : '');
+  sw.dataset.preset = key;
+  sw.style.background = preset.preview;
+  sw.innerHTML = `<div class="swatch-label">${preset.label}</div>`;
+  sw.onclick = () => {
+    document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+    sw.classList.add('active');
+    settings.colorPreset = key;
+    buildColorOverlay();
+  };
+  presetGrid.appendChild(sw);
+}
+
+// BG toggle
+const bgToggle = document.getElementById('bgToggle');
+const bgToggleLabel = document.getElementById('bgToggleLabel');
+const bgOptions = document.getElementById('bgOptions');
+bgToggle.onclick = () => {
+  settings.bgEnabled = !settings.bgEnabled;
+  bgToggle.classList.toggle('on', settings.bgEnabled);
+  bgToggleLabel.textContent = settings.bgEnabled ? 'ON' : 'OFF';
+  bgOptions.classList.toggle('visible', settings.bgEnabled);
+};
+
+// BG mode segmented control
+const bgModeSeg = document.getElementById('bgModeSeg');
+const bgSolidRow = document.getElementById('bgSolidRow');
+const bgGradRow = document.getElementById('bgGradRow');
+const bgBwRow = document.getElementById('bgBwRow');
+
+bgModeSeg.querySelectorAll('.seg').forEach(btn => {
+  btn.onclick = () => {
+    bgModeSeg.querySelectorAll('.seg').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    settings.bgMode = btn.dataset.mode;
+    bgSolidRow.style.display = settings.bgMode === 'solid' ? 'flex' : 'none';
+    bgGradRow.style.display = settings.bgMode === 'gradient' ? 'flex' : 'none';
+    bgBwRow.style.display = settings.bgMode === 'bw' ? 'flex' : 'none';
+  };
+});
+
+// BG color inputs
+document.getElementById('bgColor1').oninput = e => settings.bgSolid = e.target.value;
+document.getElementById('bgGradTop').oninput = e => settings.bgGradTop = e.target.value;
+document.getElementById('bgGradBot').oninput = e => settings.bgGradBot = e.target.value;
+
+// BW buttons
+document.querySelectorAll('.bw-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.bw-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    settings.bgBw = btn.dataset.bw;
+  };
+});
+
+// Saturation
+const satRange = document.getElementById('satRange');
+const satVal = document.getElementById('satVal');
+satRange.oninput = () => {
+  settings.saturation = parseInt(satRange.value);
+  satVal.textContent = settings.saturation + '%';
+};
+
+// Contrast
+const conRange = document.getElementById('conRange');
+const conVal = document.getElementById('conVal');
+conRange.oninput = () => {
+  settings.contrast = parseInt(conRange.value);
+  conVal.textContent = settings.contrast + '%';
+};
+
+// Reset melt
+document.getElementById('resetBtn').onclick = () => {
+  if (!currentImg) return;
+  initMeltState();
+  lastFrameTime = performance.now();
+};
+
+// Upload
+document.getElementById('uploadBtn').onclick = () => fileInput.click();
+
+// ── Reset ALL to defaults ──
+function syncUIToSettings() {
+  speedRange.value = settings.speedMult; speedVal.textContent = settings.speedMult.toFixed(1)+'×';
+  originRange.value = settings.meltOrigin; originVal.textContent = settings.meltOrigin+'%';
+  spreadRange.value = settings.meltSpread; spreadVal.textContent = settings.meltSpread+'%';
+  stripRange.value = settings.stripWidth; stripVal.textContent = settings.stripWidth+'%';
+  bandGapRange.value = settings.bandGap; bandGapVal.textContent = settings.bandGap+'%';
+  tintRange.value = Math.round(settings.tintStrength*100); tintVal.textContent = Math.round(settings.tintStrength*100)+'%';
+  satRange.value = settings.saturation; satVal.textContent = settings.saturation+'%';
+  conRange.value = settings.contrast; conVal.textContent = settings.contrast+'%';
+
+  // Direction
+  dirSeg.querySelectorAll('.seg').forEach(b => {
+    b.classList.toggle('active', b.dataset.dir === settings.direction);
+  });
+
+  // Toggles
+  bounceToggle.classList.toggle('on', settings.bounce);
+  bounceLabel.textContent = settings.bounce ? 'ON' : 'OFF';
+  bounceRangeWrap.style.display = settings.bounce ? 'block' : 'none';
+  bounceRangeSlider.value = settings.bounceRange;
+  bounceRangeVal.textContent = settings.bounceRange + '%';
+  layeredToggle.classList.toggle('on', settings.layeredMelt);
+  layeredLabel.textContent = settings.layeredMelt ? 'ON' : 'OFF';
+  layeredHint.style.display = settings.layeredMelt ? 'block' : 'none';
+  bandGapWrap.style.display = settings.layeredMelt ? 'block' : 'none';
+
+  bgToggle.classList.toggle('on', settings.bgEnabled);
+  bgToggleLabel.textContent = settings.bgEnabled ? 'ON' : 'OFF';
+  bgOptions.classList.toggle('visible', settings.bgEnabled);
+
+  // BG mode
+  bgModeSeg.querySelectorAll('.seg').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === settings.bgMode);
+  });
+  bgSolidRow.style.display = settings.bgMode === 'solid' ? 'flex' : 'none';
+  bgGradRow.style.display = settings.bgMode === 'gradient' ? 'flex' : 'none';
+  bgBwRow.style.display = settings.bgMode === 'bw' ? 'flex' : 'none';
+  document.getElementById('bgColor1').value = settings.bgSolid;
+  document.getElementById('bgGradTop').value = settings.bgGradTop;
+  document.getElementById('bgGradBot').value = settings.bgGradBot;
+
+  // Preset swatch
+  document.querySelectorAll('.swatch').forEach(s => {
+    s.classList.toggle('active', s.dataset.preset === settings.colorPreset);
+  });
+}
+
+document.getElementById('defaultsBtn').onclick = () => {
+  Object.assign(settings, JSON.parse(JSON.stringify(DEFAULT_SETTINGS)));
+  syncUIToSettings();
+  buildColorOverlay();
+  if (currentImg) { initMeltState(); lastFrameTime = performance.now(); }
+};
+
+// ── Scroll zoom (pivot around mouse cursor) ──
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const oldZ = settings.zoom;
+  const factor = e.deltaY > 0 ? 0.9 : 1.1;
+  const newZ = Math.min(8, Math.max(0.3, oldZ * factor));
+
+  // Mouse position on screen
+  const mx = e.clientX;
+  const my = e.clientY;
+
+  // The point under the cursor in "world" coords before zoom:
+  //   worldX = (screenX - panX - pivotX) / oldZ + pivotX
+  // After zoom we want the same worldX to map to the same screenX:
+  //   screenX = (worldX - pivotX) * newZ + panX_new + pivotX
+  // Solving: panX_new = panX_old + (mx - panX_old - pivotX) * (1 - newZ/oldZ)
+  // Simplify using pivot = baseX/baseY from draw():
+  const pw = getPanelOffset();
+  const cw = canvas.width, ch = canvas.height;
+  const pivotX = pw + (cw - pw) / 2;
+  const pivotY = ch * 0.04 + (imgH || 0) / 2;
+
+  settings.panX += (mx - pivotX - settings.panX) * (1 - newZ / oldZ);
+  settings.panY += (my - pivotY - settings.panY) * (1 - newZ / oldZ);
+  settings.zoom = newZ;
+}, { passive: false });
+
+// ── Mouse drag to pan ──
+let isDragging = false, dragStartX = 0, dragStartY = 0, panStartX = 0, panStartY = 0;
+
+canvas.addEventListener('mousedown', e => {
+  isDragging = true;
+  dragStartX = e.clientX; dragStartY = e.clientY;
+  panStartX = settings.panX; panStartY = settings.panY;
+  canvas.classList.add('dragging');
+});
+window.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  settings.panX = panStartX + (e.clientX - dragStartX);
+  settings.panY = panStartY + (e.clientY - dragStartY);
+});
+window.addEventListener('mouseup', () => {
+  isDragging = false;
+  canvas.classList.remove('dragging');
+});
+
+// Resize
+window.addEventListener('resize', () => {
+  if (!running) return;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+</script>
+</body>
+</html>
