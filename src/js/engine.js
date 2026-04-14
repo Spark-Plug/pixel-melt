@@ -52,8 +52,8 @@ let removeBgLib = null; // lazy-loaded
 
 async function loadRemoveBgLib() {
   if (removeBgLib) return removeBgLib;
-  // Dynamic import from CDN
-  const mod = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/+esm');
+  // Dynamic import from CDN (1.5.8 has a working data CDN for WASM + ONNX models)
+  const mod = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.8/+esm');
   removeBgLib = mod;
   return mod;
 }
@@ -68,11 +68,8 @@ export async function removeBackgroundAI(img) {
   c.getContext('2d').drawImage(img, 0, 0);
   const blob = await new Promise(r => c.toBlob(r, 'image/png'));
 
-  // Run AI removal
+  // Run AI removal (library defaults publicPath to its data CDN for WASM + ONNX)
   const resultBlob = await lib.removeBackground(blob, {
-    // Point to IMG.LY's data CDN so WASM and ONNX model files can be located
-    // (dynamic import from jsDelivr can't resolve relative asset paths)
-    publicPath: 'https://staticimgly.com/@imgly/background-removal-data/1.5.5/dist/',
     progress: (key, current, total) => {
       const el = document.getElementById('removeBgStatus');
       if (el) {
