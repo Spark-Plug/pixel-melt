@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════
-   THEME: WIN98 / VAPORWAVE RETRO
+   THEME: DAY MODE — Win98 / Retro
    ══════════════════════════════════════════════ */
 
 @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
@@ -16,174 +16,174 @@
   --text-mid: #222;
   --text-bright: #000;
   --text-hi: #000;
-  --text-muted: #666;
-  --text-hint: #888;
+  --text-muted: #555;
+  --text-hint: #777;
   --ctrl-border: #a0a0a0;
   --input-bg: #fff;
   --input-thumb: #000;
   --toggle-bg: #fff;
   --toggle-border: #808080;
   --toggle-knob: #808080;
-  --toggle-on-bg: #00807f;
+  --toggle-on-bg: #000080;
   --toggle-on-knob: #fff;
   --seg-border: #808080;
   --seg-hover-bg: #d4d0c8;
-  --seg-active-bg: #00807f;
+  --seg-active-bg: #000080;
   --btn-border: #808080;
   --btn-hover-border: #000;
   --btn-hover-bg: #d4d0c8;
   --swatch-border: #808080;
-  --swatch-active-border: #ff00ff;
-  --section-label: #00807f;
+  --swatch-active-border: #000080;
+  --section-label: #000080;
   --section-line: #808080;
   --scrollbar-thumb: #808080;
-  --loader-color: #00ffff;
-  --loader-border: #ff00ff;
-  /* retro-specific */
+  --loader-color: #000;
+  --loader-border: #808080;
+  --accent: #000080;
   --win-title-bg: linear-gradient(90deg, #000080, #1084d0);
   --win-title-color: #fff;
-  --accent-cyan: #00ffff;
-  --accent-magenta: #ff00ff;
-  --accent-purple: #8000ff;
-  --retro-highlight: #ffffff;
-  --retro-shadow: #808080;
-  --retro-dark-shadow: #404040;
 }
 
-/* ═══════ BODY / CANVAS ═══════ */
-[data-theme="retro"] {
-  cursor: default;
-}
+[data-theme="retro"] { cursor: default; }
 
 /* ═══════ LOADER ═══════ */
 [data-theme="retro"] #loader {
   background: #008080;
   font-family: var(--font);
-  font-size: 18px;
-  letter-spacing: 1px;
-  color: #00ffff;
 }
 [data-theme="retro"] .loader-content {
   background: #c0c0c0; border: 2px outset #fff;
-  padding: 0 0 20px; gap: 0; min-width: 360px;
+  padding: 0 0 20px; gap: 0; min-width: 380px;
+  box-shadow: 2px 2px 0 #000;
 }
 [data-theme="retro"] .loader-content::before {
   content: 'pixel_melt.exe';
-  display: block; width: 100%; padding: 4px 8px;
+  display: block; width: 100%; padding: 3px 6px;
   background: var(--win-title-bg);
   color: var(--win-title-color);
-  font-size: 16px; font-weight: 700; letter-spacing: 0;
-  margin-bottom: 16px;
+  font-size: 15px; font-weight: 700; letter-spacing: 0;
+  margin-bottom: 12px;
 }
 [data-theme="retro"] .loader-title {
-  color: #000; font-size: 18px; letter-spacing: 2px;
+  color: #000; font-size: 20px; letter-spacing: 2px;
+  text-shadow: none;
 }
 [data-theme="retro"] .loader-btn {
   background: #c0c0c0; border: 2px outset #fff;
-  color: #000; font-size: 13px; letter-spacing: 0;
+  color: #000; font-size: 14px; letter-spacing: 0;
   width: 150px; height: 80px; font-family: var(--font);
+  box-shadow: 1px 1px 0 #000;
 }
 [data-theme="retro"] .loader-btn:hover { background: #d4d0c8; }
-[data-theme="retro"] .loader-btn:active { border-style: inset; }
+[data-theme="retro"] .loader-btn:active { border-style: inset; box-shadow: none; }
 [data-theme="retro"] .loader-hint {
-  color: #666; font-size: 12px; letter-spacing: 0;
+  color: #555; font-size: 13px; letter-spacing: 0;
 }
 
-/* ═══════ PANEL ═══════ */
+/* ═══════ PANEL — full Win98 window ═══════ */
 [data-theme="retro"] #panel {
-  border-right: 2px outset #fff;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #808080;
+  border: 2px outset #fff;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow: 2px 0 0 #000;
 }
 
 /* Title bar */
 [data-theme="retro"] .p-head {
   background: var(--win-title-bg);
-  border-bottom: 2px outset #fff;
-  padding: 6px 8px;
+  border-bottom: none;
+  padding: 3px 6px;
+  min-height: 24px;
 }
 [data-theme="retro"] .p-head .title {
-  color: #fff; font-size: 16px; font-weight: 700;
+  color: #fff; font-size: 15px; font-weight: 700;
   letter-spacing: 1px;
-  text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.4);
 }
 [data-theme="retro"] .p-head .ver {
-  color: rgba(255,255,255,0.7); font-size: 12px;
+  color: rgba(255,255,255,0.6); font-size: 12px;
   letter-spacing: 0; margin-top: 0;
 }
 
-/* Theme button — fixed corner */
+/* Decorative menu bar below title */
+[data-theme="retro"] .p-head::after {
+  content: 'File  Edit  View  Options  Help';
+  display: block; width: calc(100% + 12px); margin: 4px -6px -3px;
+  padding: 2px 6px; font-size: 13px; color: #000;
+  background: #c0c0c0; border-top: 1px solid #fff;
+  border-bottom: 1px solid #808080;
+  letter-spacing: 0; font-weight: 400;
+  text-shadow: none;
+}
+
+/* Theme button */
 [data-theme="retro"] #themeBtn {
-  background: #c0c0c0;
-  border: 2px outset #fff;
+  background: #c0c0c0; border: 2px outset #fff;
   color: #000; font-size: 14px; letter-spacing: 0;
-  padding: 3px 10px; font-family: var(--font);
+  padding: 2px 10px; font-family: var(--font);
+  box-shadow: 1px 1px 0 #000;
 }
-[data-theme="retro"] #themeBtn:hover {
-  background: #d4d0c8;
-}
-[data-theme="retro"] #themeBtn:active {
-  border-style: inset;
-}
+[data-theme="retro"] #themeBtn:hover { background: #d4d0c8; }
+[data-theme="retro"] #themeBtn:active { border-style: inset; box-shadow: none; }
 
 /* Panel toggle */
 [data-theme="retro"] #panelToggle {
-  background: #c0c0c0;
-  border: 2px outset #fff; border-left: none;
-  color: #000; font-size: 14px;
-  backdrop-filter: none;
+  background: #c0c0c0; border: 2px outset #fff; border-left: none;
+  color: #000; font-size: 14px; backdrop-filter: none;
+  box-shadow: 1px 0 0 #000;
 }
 [data-theme="retro"] #panel.collapsed ~ #panelToggle {
   border-left: 2px outset #fff;
 }
 
-/* Scrollbar */
+/* Scrollbar — chunky Win98 */
 [data-theme="retro"] .p-body {
-  scrollbar-color: #c0c0c0 #d4d0c8;
+  scrollbar-color: #c0c0c0 #d4d0c8; scrollbar-width: auto;
 }
-[data-theme="retro"] .p-body::-webkit-scrollbar { width: 16px; background: #d4d0c8; }
+[data-theme="retro"] .p-body::-webkit-scrollbar {
+  width: 18px; background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><rect width="1" height="1" fill="%23c0c0c0"/><rect x="1" y="1" width="1" height="1" fill="%23c0c0c0"/><rect x="1" width="1" height="1" fill="%23fff"/><rect y="1" width="1" height="1" fill="%23fff"/></svg>');
+}
 [data-theme="retro"] .p-body::-webkit-scrollbar-thumb {
   background: #c0c0c0; border: 2px outset #fff;
+}
+[data-theme="retro"] .p-body::-webkit-scrollbar-button {
+  height: 18px; background: #c0c0c0; border: 2px outset #fff;
 }
 
 /* ═══════ SECTION HEADERS ═══════ */
 [data-theme="retro"] .section-head {
   font-size: 13px; letter-spacing: 1px;
   color: #000080; font-weight: 700;
-  border-top: 1px solid #808080;
-  padding: 10px 10px 4px;
-  text-shadow: none;
+  border-top: 2px groove #fff;
+  padding: 8px 8px 3px;
+  background: linear-gradient(90deg, rgba(0,0,128,0.06), transparent);
 }
 
 /* ═══════ CONTROLS ═══════ */
 [data-theme="retro"] .ctrl {
-  border-bottom: 1px solid #a0a0a0;
-  padding: 8px 10px 6px;
+  border-bottom: 1px solid #a0a0a0; padding: 6px 8px 5px;
 }
 [data-theme="retro"] .ctrl-label {
-  font-size: 14px; letter-spacing: 0.5px;
-  color: #000; font-weight: 400; margin-bottom: 8px;
+  font-size: 14px; letter-spacing: 0.5px; color: #000;
+  font-weight: 400; margin-bottom: 6px;
 }
 [data-theme="retro"] .ctrl-val {
-  font-size: 14px; color: #000080; letter-spacing: 0;
+  font-size: 14px; color: #000080; letter-spacing: 0; font-weight: 700;
 }
 
 /* ═══════ RANGE SLIDERS ═══════ */
 [data-theme="retro"] input[type=range] {
-  height: 4px; background: #808080;
-  border: 1px inset #808080;
+  height: 6px; background: #808080; border: 2px inset #808080;
 }
 [data-theme="retro"] input[type=range]::-webkit-slider-thumb {
-  width: 12px; height: 20px; background: #c0c0c0;
+  width: 11px; height: 22px; background: #c0c0c0;
   border: 2px outset #fff; margin-top: -8px;
 }
 [data-theme="retro"] input[type=range]::-moz-range-thumb {
-  width: 12px; height: 20px; background: #c0c0c0;
+  width: 11px; height: 22px; background: #c0c0c0;
   border: 2px outset #fff; border-radius: 0;
 }
 [data-theme="retro"] input[type=range]::-webkit-slider-runnable-track {
-  height: 4px; background: #808080; border: 1px inset #808080;
+  height: 6px; background: #808080; border: 2px inset #808080;
 }
 
 /* ═══════ TOGGLE SWITCHES ═══════ */
@@ -191,9 +191,7 @@
   width: 40px; height: 20px;
   border: 2px inset #808080; background: #fff;
 }
-[data-theme="retro"] .toggle-switch.on {
-  background: #00807f;
-}
+[data-theme="retro"] .toggle-switch.on { background: #000080; }
 [data-theme="retro"] .toggle-switch::after {
   width: 14px; height: 14px; top: 1px; left: 2px;
   background: #c0c0c0; border: 1px outset #fff;
@@ -206,40 +204,31 @@
 }
 
 /* ═══════ SEGMENTED CONTROLS ═══════ */
-[data-theme="retro"] .seg-ctrl {
-  border: 2px inset #808080;
-}
+[data-theme="retro"] .seg-ctrl { border: 2px inset #808080; }
 [data-theme="retro"] .seg {
   font-size: 13px; letter-spacing: 0.5px;
   color: #000; border-right: 1px solid #808080;
   padding: 4px 0; font-family: var(--font);
 }
 [data-theme="retro"] .seg:hover { background: #d4d0c8; color: #000; }
-[data-theme="retro"] .seg.active {
-  background: #000080; color: #fff;
-}
+[data-theme="retro"] .seg.active { background: #000080; color: #fff; }
 
 /* ═══════ BUTTONS ═══════ */
 [data-theme="retro"] .btn {
-  background: #c0c0c0;
-  border: 2px outset #fff;
+  background: #c0c0c0; border: 2px outset #fff;
   color: #000; font-size: 14px; letter-spacing: 0.5px;
-  padding: 6px 0; font-family: var(--font);
+  padding: 5px 0; font-family: var(--font);
+  box-shadow: 1px 1px 0 #000;
 }
-[data-theme="retro"] .btn:hover {
-  background: #d4d0c8; border-color: #fff; color: #000;
-}
-[data-theme="retro"] .btn:active {
-  border-style: inset;
-}
+[data-theme="retro"] .btn:hover { background: #d4d0c8; }
+[data-theme="retro"] .btn:active { border-style: inset; box-shadow: none; }
 
 /* ═══════ SWATCHES ═══════ */
 [data-theme="retro"] .swatch {
-  border: 2px inset #808080;
-  height: 32px;
+  border: 2px inset #808080; height: 32px;
 }
-[data-theme="retro"] .swatch:hover { border-color: #ff00ff; transform: none; }
-[data-theme="retro"] .swatch.active { border: 2px solid #ff00ff; }
+[data-theme="retro"] .swatch:hover { border-color: #000080; transform: none; }
+[data-theme="retro"] .swatch.active { border: 2px solid #000080; box-shadow: 0 0 0 1px #000080; }
 [data-theme="retro"] .swatch .swatch-label {
   font-size: 11px; letter-spacing: 0; font-family: var(--font);
   color: #fff; text-shadow: 1px 1px 0 #000;
@@ -250,17 +239,57 @@
   border: 2px inset #808080; width: 32px; height: 22px;
 }
 [data-theme="retro"] .color-wrap label {
-  font-size: 12px; letter-spacing: 0; color: #000;
+  font-size: 13px; letter-spacing: 0; color: #000;
 }
 
 /* ═══════ BW BUTTONS ═══════ */
 [data-theme="retro"] .bw-btn {
   border: 2px inset #808080; width: 36px; height: 24px;
 }
-[data-theme="retro"] .bw-btn.active { border: 2px solid #ff00ff; }
+[data-theme="retro"] .bw-btn.active { border: 2px solid #000080; }
 
 /* ═══════ HINTS ═══════ */
 [data-theme="retro"] .ctrl-hint-inline {
-  font-size: 11px; letter-spacing: 0; color: #666;
+  font-size: 12px; letter-spacing: 0; color: #555;
 }
 
+/* ═══════ ACTION BUTTONS AREA ═══════ */
+[data-theme="retro"] .ctrl-actions { padding: 8px 8px; }
+
+/* ═══════ INTERACTION OVERRIDES ═══════ */
+/* Win98: buttons press inward with text shift */
+[data-theme="retro"] .btn:active {
+  border-style: inset; box-shadow: none;
+  transform: none; padding-top: 7px; padding-left: 1px;
+}
+[data-theme="retro"] .loader-btn:active {
+  border-style: inset; box-shadow: none;
+  transform: none; padding-top: 1px; padding-left: 1px;
+}
+[data-theme="retro"] #themeBtn:active {
+  border-style: inset; box-shadow: none;
+  transform: none;
+}
+/* Win98: no scale transforms on hover (flat feel) */
+[data-theme="retro"] .loader-btn:hover { transform: none; }
+[data-theme="retro"] #themeBtn:hover { transform: none; }
+[data-theme="retro"] .swatch:hover { transform: none; }
+[data-theme="retro"] .swatch:active { transform: none; }
+[data-theme="retro"] .swatch.active { transform: none; }
+[data-theme="retro"] .bw-btn:hover { transform: none; }
+[data-theme="retro"] .bw-btn:active { transform: none; }
+[data-theme="retro"] .bw-btn.active { transform: none; }
+[data-theme="retro"] input[type=color]:hover { transform: none; }
+/* Win98: toggle click — deeper inset */
+[data-theme="retro"] .toggle-switch:active {
+  border-style: inset;
+}
+[data-theme="retro"] .toggle-switch:active::after { transform: none; }
+/* Win98: segmented pressed */
+[data-theme="retro"] .seg:active {
+  transform: none; background: #a0a0a0;
+}
+/* Win98: section accent bar — navy blue */
+[data-theme="retro"] .section-head::before {
+  background: #000080; box-shadow: none; opacity: 0.8;
+}

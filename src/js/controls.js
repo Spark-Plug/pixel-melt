@@ -13,7 +13,7 @@ const fileInput = document.getElementById('fileInput');
 const themeBtn = document.getElementById('themeBtn');
 function applyTheme(theme) {
   document.body.setAttribute('data-theme', theme);
-  themeBtn.textContent = theme === 'dark' ? 'RETRO' : 'MODERN';
+  themeBtn.textContent = theme === 'dark' ? 'DAY' : 'NIGHT';
   try { localStorage.setItem('pixelmelt-theme', theme); } catch(e) {}
 }
 const savedTheme = (() => { try { return localStorage.getItem('pixelmelt-theme'); } catch(e) { return null; } })();
