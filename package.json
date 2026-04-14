@@ -1,0 +1,8 @@
+{
+  "name": "pixel-melt",
+  "version": "4.1.0",
+  "description": "Interactive pixel-sorting melt effect tool",
+  "scripts": {
+    "build": "node src/build.js"
+  }
+}

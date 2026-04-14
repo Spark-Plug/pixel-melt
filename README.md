@@ -2,7 +2,7 @@
 
 A browser-based interactive pixel-sorting / melt / collapse effect tool. Drop any image and watch it dissolve into flowing pixel columns with real-time parameter control.
 
-Built with vanilla JavaScript and Canvas 2D API. Zero dependencies. Single HTML file.
+Built with vanilla JavaScript and Canvas 2D API. Single HTML file for easy distribution.
 
 ## Demo
 
@@ -39,7 +39,7 @@ Built with vanilla JavaScript and Canvas 2D API. Zero dependencies. Single HTML 
 - **Scroll to zoom** (pivots around mouse cursor)
 - **Drag to pan**
 - **Drop any image** to load (or click to browse)
-- Auto-detects and removes light/checkerboard backgrounds from source images
+- **AI background removal** — powered by [@imgly/background-removal](https://github.com/nicolo-ribaudo/background-removal-js) (model downloaded on first use, cached after)
 
 ### Controls
 | Control | Range | Description |
@@ -55,15 +55,17 @@ Built with vanilla JavaScript and Canvas 2D API. Zero dependencies. Single HTML 
 | Tint Strength | 0% - 100% | Color overlay intensity |
 | Saturation | 0% - 250% | Image saturation |
 | Contrast | 0% - 250% | Image contrast |
+| Remove BG | On/Off | AI-powered background removal |
 | Background | Solid / Gradient / B&W | Canvas background mode |
 
 ## Usage
 
-Just open `index.html` in a browser. No build step, no server required.
+Open `dist/pixel-melt.html` in a browser — no build step or server required.
 
+For development, the source is modularized under `src/`:
 ```bash
-# or serve locally
-npx serve .
+npx serve src          # dev server
+npm run build          # bundle → dist/pixel-melt.html
 ```
 
 Drop an image (PNG with transparency works best) and adjust the controls in the left panel.
@@ -75,6 +77,10 @@ Drop an image (PNG with transparency works best) and adjust the controls in the 
 - **Buffer architecture**: Y-offset buffer with headroom above and below for bidirectional displacement
 - **Performance**: Reusable Uint32Array buffer, dirty-region-scoped tint/saturation/contrast loops, partial putImageData
 
+## Acknowledgments
+
+- AI background removal powered by [@imgly/background-removal](https://github.com/imgly/background-removal-js) (AGPL-3.0), loaded via CDN at runtime
+
 ## License
 
-MIT
+MIT — note that the `@imgly/background-removal` dependency is licensed under AGPL-3.0
