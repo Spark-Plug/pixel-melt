@@ -1108,8 +1108,6 @@ const _M = {};
 
 // ── js/engine.js ──
 (() => {
-  const settings = _M.settings;
-  const PRESETS = _M.PRESETS;
   // ══════════════════════════════════════════════
   //  PERFORMANCE CONSTANTS & LOOKUP TABLES
   // ══════════════════════════════════════════════
@@ -1141,7 +1139,7 @@ const _M = {};
   let bufCanvas, bufCtx, bufH, bufYOff, bufImageData, bufClearArr;
   let colorOvrPixels;
   let cachedBgGradient = null;  // cached gradient to avoid per-frame recreation
-  let cachedBgKey = '';         // key to detect when gradient settings change
+  let cachedBgKey = '';         // key to detect when gradient _M.settings change
   let currentImg = null;    // possibly bg-removed version
   let originalImg = null;   // always the raw upload
   
@@ -1286,7 +1284,7 @@ const _M = {};
   // ══════════════════════════════════════════════
   function buildColorOverlay() {
     if (!imgW) return;
-    const preset = PRESETS[settings.colorPreset];
+    const preset = _M.PRESETS[_M.settings.colorPreset];
     if (!preset || preset.stops.length === 0) {
       colorOvrPixels = new Uint8ClampedArray(imgW * bufH * 4);
       return;
@@ -1328,11 +1326,11 @@ const _M = {};
     meltDelay  = new Float32Array(imgW);
     meltDir    = new Int8Array(imgW);
   
-    const layered = settings.layeredMelt;
-    const dir = settings.direction;
+    const layered = _M.settings.layeredMelt;
+    const dir = _M.settings.direction;
   
-    const originPct = settings.meltOrigin / 100;
-    const spreadPct = settings.meltSpread / 100;
+    const originPct = _M.settings.meltOrigin / 100;
+    const spreadPct = _M.settings.meltSpread / 100;
     const spreadAmt = spreadPct * 0.35;
   
     let lumMin = 1, lumMax = 0;
@@ -1347,7 +1345,7 @@ const _M = {};
     const lumRange = lumMax - lumMin;
   
     const NUM_BANDS = 5;
-    const gapScale = settings.bandGap / 50;
+    const gapScale = _M.settings.bandGap / 50;
     const BAND_BASE_DELAY = [100, 2200, 4500, 7000, 10000].map(d => d * gapScale);
     const BAND_DELAY_RAND = [400, 600, 700, 800, 600].map(d => d * gapScale);
   
@@ -1417,7 +1415,7 @@ const _M = {};
     }
   
     // Strip width grouping
-    const sw = settings.stripWidth / 100;
+    const sw = _M.settings.stripWidth / 100;
     if (sw > 0.01) {
       const peak = 1 + sw * 30;
   
@@ -1461,7 +1459,7 @@ const _M = {};
   
     const dt = time - lastFrameTime;
     lastFrameTime = time;
-    accumTime += dt * settings.speedMult;
+    accumTime += dt * _M.settings.speedMult;
   
     draw();
   }
@@ -1481,8 +1479,8 @@ const _M = {};
     const cw = canvas.width, ch = canvas.height;
   
     // Update melt distances
-    const doBounce = settings.bounce;
-    const bounceRangeMult = settings.bounceRange * 0.01; // hoist out of loop
+    const doBounce = _M.settings.bounce;
+    const bounceRangeMult = _M.settings.bounceRange * 0.01; // hoist out of loop
     for (let x=0;x<imgW;x++) {
       if (meltDelay[x]>=999990||accumTime<meltDelay[x]) { meltDist[x]=0; continue; }
       const t=accumTime-meltDelay[x];
@@ -1598,7 +1596,7 @@ const _M = {};
   
     // Pixel-level color tint (only dirty rows)
     const cPx = colorOvrPixels;
-    const tStr = settings.tintStrength;
+    const tStr = _M.settings.tintStrength;
     const dMinI = Math.max(0, dirtyMinY) * imgW * 4;
     const dMaxI = Math.min(bufH, dirtyMaxY + 1) * imgW * 4;
     if (cPx && tStr > 0.001) {
@@ -1629,8 +1627,8 @@ const _M = {};
     }
   
     // Saturation & Contrast (pixel-level)
-    const sat = settings.saturation * 0.01;
-    const con = settings.contrast * 0.01;
+    const sat = _M.settings.saturation * 0.01;
+    const con = _M.settings.contrast * 0.01;
     const needsSat = Math.abs(sat - 1) > 0.01;
     const needsCon = Math.abs(con - 1) > 0.01;
     if (needsSat || needsCon) {
@@ -1662,20 +1660,20 @@ const _M = {};
   
     // Draw background (cache gradient to avoid per-frame recreation)
     const pw = getPanelOffset();
-    if (settings.bgEnabled) {
-      if (settings.bgMode === 'gradient') {
-        const bgKey = `${ch}|${settings.bgGradTop}|${settings.bgGradBot}`;
+    if (_M.settings.bgEnabled) {
+      if (_M.settings.bgMode === 'gradient') {
+        const bgKey = `${ch}|${_M.settings.bgGradTop}|${_M.settings.bgGradBot}`;
         if (bgKey !== cachedBgKey) {
           cachedBgGradient = ctx.createLinearGradient(0,0,0,ch);
-          cachedBgGradient.addColorStop(0, settings.bgGradTop);
-          cachedBgGradient.addColorStop(1, settings.bgGradBot);
+          cachedBgGradient.addColorStop(0, _M.settings.bgGradTop);
+          cachedBgGradient.addColorStop(1, _M.settings.bgGradBot);
           cachedBgKey = bgKey;
         }
         ctx.fillStyle = cachedBgGradient;
-      } else if (settings.bgMode === 'bw') {
-        ctx.fillStyle = settings.bgBw;
+      } else if (_M.settings.bgMode === 'bw') {
+        ctx.fillStyle = _M.settings.bgBw;
       } else {
-        ctx.fillStyle = settings.bgSolid;
+        ctx.fillStyle = _M.settings.bgSolid;
       }
     } else {
       ctx.fillStyle = '#0a0a0c';
@@ -1687,10 +1685,10 @@ const _M = {};
     const imgDstY = Math.floor(ch * 0.04) - bufYOff;
     const baseX = pw + (cw - pw) / 2;
     const baseY = Math.floor(ch * 0.04) + imgH / 2;
-    const z = settings.zoom;
+    const z = _M.settings.zoom;
   
     ctx.save();
-    ctx.translate(baseX + settings.panX, baseY + settings.panY);
+    ctx.translate(baseX + _M.settings.panX, baseY + _M.settings.panY);
     ctx.scale(z, z);
     ctx.translate(-baseX, -baseY);
     ctx.drawImage(bufCanvas, 0, 0, imgW, bufH, imgDstX, imgDstY, imgW, bufH);
@@ -1719,16 +1717,6 @@ const _M = {};
 
 // ── js/controls.js ──
 (() => {
-  const settings = _M.settings;
-  const DEFAULT_SETTINGS = _M.DEFAULT_SETTINGS;
-  const PRESETS = _M.PRESETS;
-  const init = _M.init;
-  const initMeltState = _M.initMeltState;
-  const buildColorOverlay = _M.buildColorOverlay;
-  const currentImg = _M.currentImg;
-  const originalImg = _M.originalImg;
-  const removeBackgroundAI = _M.removeBackgroundAI;
-  const setLastFrameTime = _M.setLastFrameTime;
   // ══════════════════════════════════════════════
   //  PANEL CONTROLS
   // ══════════════════════════════════════════════
@@ -1762,8 +1750,8 @@ const _M = {};
   const speedRange = document.getElementById('speedRange');
   const speedVal = document.getElementById('speedVal');
   speedRange.oninput = () => {
-    settings.speedMult = parseFloat(speedRange.value);
-    speedVal.textContent = settings.speedMult.toFixed(1) + '×';
+    _M.settings.speedMult = parseFloat(speedRange.value);
+    speedVal.textContent = _M.settings.speedMult.toFixed(1) + '×';
   };
   
   // Direction
@@ -1772,8 +1760,8 @@ const _M = {};
     btn.onclick = () => {
       dirSeg.querySelectorAll('.seg').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      settings.direction = btn.dataset.dir;
-      if (currentImg) { initMeltState(); setLastFrameTime(performance.now()); }
+      _M.settings.direction = btn.dataset.dir;
+      if (_M.currentImg) { _M.initMeltState(); _M.setLastFrameTime(performance.now()); }
     };
   });
   
@@ -1784,14 +1772,14 @@ const _M = {};
   const bounceRangeSlider = document.getElementById('bounceRangeSlider');
   const bounceRangeVal = document.getElementById('bounceRangeVal');
   bounceToggle.onclick = () => {
-    settings.bounce = !settings.bounce;
-    bounceToggle.classList.toggle('on', settings.bounce);
-    bounceLabel.textContent = settings.bounce ? 'ON' : 'OFF';
-    bounceRangeWrap.style.display = settings.bounce ? 'block' : 'none';
+    _M.settings.bounce = !_M.settings.bounce;
+    bounceToggle.classList.toggle('on', _M.settings.bounce);
+    bounceLabel.textContent = _M.settings.bounce ? 'ON' : 'OFF';
+    bounceRangeWrap.style.display = _M.settings.bounce ? 'block' : 'none';
   };
   bounceRangeSlider.oninput = () => {
-    settings.bounceRange = parseInt(bounceRangeSlider.value);
-    bounceRangeVal.textContent = settings.bounceRange + '%';
+    _M.settings.bounceRange = parseInt(bounceRangeSlider.value);
+    bounceRangeVal.textContent = _M.settings.bounceRange + '%';
   };
   
   // Layered melt
@@ -1800,71 +1788,71 @@ const _M = {};
   const layeredHint = document.getElementById('layeredHint');
   const bandGapWrap = document.getElementById('bandGapWrap');
   layeredToggle.onclick = () => {
-    settings.layeredMelt = !settings.layeredMelt;
-    layeredToggle.classList.toggle('on', settings.layeredMelt);
-    layeredLabel.textContent = settings.layeredMelt ? 'ON' : 'OFF';
-    layeredHint.style.display = settings.layeredMelt ? 'block' : 'none';
-    bandGapWrap.style.display = settings.layeredMelt ? 'block' : 'none';
-    if (currentImg) { initMeltState(); setLastFrameTime(performance.now()); }
+    _M.settings.layeredMelt = !_M.settings.layeredMelt;
+    layeredToggle.classList.toggle('on', _M.settings.layeredMelt);
+    layeredLabel.textContent = _M.settings.layeredMelt ? 'ON' : 'OFF';
+    layeredHint.style.display = _M.settings.layeredMelt ? 'block' : 'none';
+    bandGapWrap.style.display = _M.settings.layeredMelt ? 'block' : 'none';
+    if (_M.currentImg) { _M.initMeltState(); _M.setLastFrameTime(performance.now()); }
   };
   
   // Melt zone: Origin
   const originRange = document.getElementById('originRange');
   const originVal = document.getElementById('originVal');
   originRange.oninput = () => {
-    settings.meltOrigin = parseInt(originRange.value);
-    originVal.textContent = settings.meltOrigin + '%';
-    if (currentImg) { initMeltState(); setLastFrameTime(performance.now()); }
+    _M.settings.meltOrigin = parseInt(originRange.value);
+    originVal.textContent = _M.settings.meltOrigin + '%';
+    if (_M.currentImg) { _M.initMeltState(); _M.setLastFrameTime(performance.now()); }
   };
   
   // Melt zone: Spread
   const spreadRange = document.getElementById('spreadRange');
   const spreadVal = document.getElementById('spreadVal');
   spreadRange.oninput = () => {
-    settings.meltSpread = parseInt(spreadRange.value);
-    spreadVal.textContent = settings.meltSpread + '%';
-    if (currentImg) { initMeltState(); setLastFrameTime(performance.now()); }
+    _M.settings.meltSpread = parseInt(spreadRange.value);
+    spreadVal.textContent = _M.settings.meltSpread + '%';
+    if (_M.currentImg) { _M.initMeltState(); _M.setLastFrameTime(performance.now()); }
   };
   
   // Melt zone: Strip Width
   const stripRange = document.getElementById('stripRange');
   const stripVal = document.getElementById('stripVal');
   stripRange.oninput = () => {
-    settings.stripWidth = parseInt(stripRange.value);
-    stripVal.textContent = settings.stripWidth + '%';
-    if (currentImg) { initMeltState(); setLastFrameTime(performance.now()); }
+    _M.settings.stripWidth = parseInt(stripRange.value);
+    stripVal.textContent = _M.settings.stripWidth + '%';
+    if (_M.currentImg) { _M.initMeltState(); _M.setLastFrameTime(performance.now()); }
   };
   
   // Melt zone: Band Gap (layered only)
   const bandGapRange = document.getElementById('bandGapRange');
   const bandGapVal = document.getElementById('bandGapVal');
   bandGapRange.oninput = () => {
-    settings.bandGap = parseInt(bandGapRange.value);
-    bandGapVal.textContent = settings.bandGap + '%';
-    if (currentImg) { initMeltState(); setLastFrameTime(performance.now()); }
+    _M.settings.bandGap = parseInt(bandGapRange.value);
+    bandGapVal.textContent = _M.settings.bandGap + '%';
+    if (_M.currentImg) { _M.initMeltState(); _M.setLastFrameTime(performance.now()); }
   };
   
   // Tint strength
   const tintRange = document.getElementById('tintRange');
   const tintVal = document.getElementById('tintVal');
   tintRange.oninput = () => {
-    settings.tintStrength = parseInt(tintRange.value) / 100;
+    _M.settings.tintStrength = parseInt(tintRange.value) / 100;
     tintVal.textContent = parseInt(tintRange.value) + '%';
   };
   
   // Presets
   const presetGrid = document.getElementById('presetGrid');
-  for (const [key, preset] of Object.entries(PRESETS)) {
+  for (const [key, preset] of Object.entries(_M.PRESETS)) {
     const sw = document.createElement('div');
-    sw.className = 'swatch' + (key === settings.colorPreset ? ' active' : '');
+    sw.className = 'swatch' + (key === _M.settings.colorPreset ? ' active' : '');
     sw.dataset.preset = key;
     sw.style.background = preset.preview;
     sw.innerHTML = `<div class="swatch-label">${preset.label}</div>`;
     sw.onclick = () => {
       document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
       sw.classList.add('active');
-      settings.colorPreset = key;
-      buildColorOverlay();
+      _M.settings.colorPreset = key;
+      _M.buildColorOverlay();
     };
     presetGrid.appendChild(sw);
   }
@@ -1874,10 +1862,10 @@ const _M = {};
   const bgToggleLabel = document.getElementById('bgToggleLabel');
   const bgOptions = document.getElementById('bgOptions');
   bgToggle.onclick = () => {
-    settings.bgEnabled = !settings.bgEnabled;
-    bgToggle.classList.toggle('on', settings.bgEnabled);
-    bgToggleLabel.textContent = settings.bgEnabled ? 'ON' : 'OFF';
-    bgOptions.classList.toggle('visible', settings.bgEnabled);
+    _M.settings.bgEnabled = !_M.settings.bgEnabled;
+    bgToggle.classList.toggle('on', _M.settings.bgEnabled);
+    bgToggleLabel.textContent = _M.settings.bgEnabled ? 'ON' : 'OFF';
+    bgOptions.classList.toggle('visible', _M.settings.bgEnabled);
   };
   
   // BG mode segmented control
@@ -1890,24 +1878,24 @@ const _M = {};
     btn.onclick = () => {
       bgModeSeg.querySelectorAll('.seg').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      settings.bgMode = btn.dataset.mode;
-      bgSolidRow.style.display = settings.bgMode === 'solid' ? 'flex' : 'none';
-      bgGradRow.style.display = settings.bgMode === 'gradient' ? 'flex' : 'none';
-      bgBwRow.style.display = settings.bgMode === 'bw' ? 'flex' : 'none';
+      _M.settings.bgMode = btn.dataset.mode;
+      bgSolidRow.style.display = _M.settings.bgMode === 'solid' ? 'flex' : 'none';
+      bgGradRow.style.display = _M.settings.bgMode === 'gradient' ? 'flex' : 'none';
+      bgBwRow.style.display = _M.settings.bgMode === 'bw' ? 'flex' : 'none';
     };
   });
   
   // BG color inputs
-  document.getElementById('bgColor1').oninput = e => settings.bgSolid = e.target.value;
-  document.getElementById('bgGradTop').oninput = e => settings.bgGradTop = e.target.value;
-  document.getElementById('bgGradBot').oninput = e => settings.bgGradBot = e.target.value;
+  document.getElementById('bgColor1').oninput = e => _M.settings.bgSolid = e.target.value;
+  document.getElementById('bgGradTop').oninput = e => _M.settings.bgGradTop = e.target.value;
+  document.getElementById('bgGradBot').oninput = e => _M.settings.bgGradBot = e.target.value;
   
   // BW buttons
   document.querySelectorAll('.bw-btn').forEach(btn => {
     btn.onclick = () => {
       document.querySelectorAll('.bw-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      settings.bgBw = btn.dataset.bw;
+      _M.settings.bgBw = btn.dataset.bw;
     };
   });
   
@@ -1915,16 +1903,16 @@ const _M = {};
   const satRange = document.getElementById('satRange');
   const satVal = document.getElementById('satVal');
   satRange.oninput = () => {
-    settings.saturation = parseInt(satRange.value);
-    satVal.textContent = settings.saturation + '%';
+    _M.settings.saturation = parseInt(satRange.value);
+    satVal.textContent = _M.settings.saturation + '%';
   };
   
   // Contrast
   const conRange = document.getElementById('conRange');
   const conVal = document.getElementById('conVal');
   conRange.oninput = () => {
-    settings.contrast = parseInt(conRange.value);
-    conVal.textContent = settings.contrast + '%';
+    _M.settings.contrast = parseInt(conRange.value);
+    conVal.textContent = _M.settings.contrast + '%';
   };
   
   // Remove BG (AI-powered)
@@ -1937,8 +1925,8 @@ const _M = {};
   // Called when a new image is uploaded to clear the cache
   function resetRemoveBgCache() {
     removeBgCachedImg = null;
-    if (settings.removeBg) {
-      settings.removeBg = false;
+    if (_M.settings.removeBg) {
+      _M.settings.removeBg = false;
       removeBgToggle.classList.remove('on');
       removeBgLabel.textContent = 'OFF';
       removeBgStatus.style.display = 'none';
@@ -1947,14 +1935,14 @@ const _M = {};
   
   removeBgToggle.onclick = async () => {
     if (removeBgProcessing) return;
-    settings.removeBg = !settings.removeBg;
-    removeBgToggle.classList.toggle('on', settings.removeBg);
+    _M.settings.removeBg = !_M.settings.removeBg;
+    removeBgToggle.classList.toggle('on', _M.settings.removeBg);
   
-    if (settings.removeBg && originalImg) {
+    if (_M.settings.removeBg && _M.originalImg) {
       if (removeBgCachedImg) {
         // Use cached result
         removeBgLabel.textContent = 'ON';
-        await init(removeBgCachedImg, true);
+        await _M.init(removeBgCachedImg, true);
       } else {
         // Run AI removal
         removeBgProcessing = true;
@@ -1962,107 +1950,101 @@ const _M = {};
         removeBgStatus.style.display = 'block';
         removeBgStatus.textContent = 'LOADING MODEL...';
         try {
-          const result = await removeBackgroundAI(originalImg);
+          const result = await _M.removeBackgroundAI(_M.originalImg);
           removeBgCachedImg = result;
           removeBgStatus.textContent = 'DONE';
           setTimeout(() => { removeBgStatus.style.display = 'none'; }, 1000);
           removeBgLabel.textContent = 'ON';
-          await init(result, true);
+          await _M.init(result, true);
         } catch (e) {
           console.error('BG removal failed:', e);
           removeBgStatus.textContent = 'FAILED';
           setTimeout(() => { removeBgStatus.style.display = 'none'; }, 2000);
-          settings.removeBg = false;
+          _M.settings.removeBg = false;
           removeBgToggle.classList.remove('on');
           removeBgLabel.textContent = 'OFF';
         }
         removeBgProcessing = false;
       }
-    } else if (!settings.removeBg && originalImg) {
+    } else if (!_M.settings.removeBg && _M.originalImg) {
       // Restore original
       removeBgLabel.textContent = 'OFF';
       removeBgStatus.style.display = 'none';
-      await init(originalImg, true);
+      await _M.init(_M.originalImg, true);
     }
   };
   
   // Reset melt
   document.getElementById('resetBtn').onclick = () => {
-    if (!currentImg) return;
-    initMeltState();
-    setLastFrameTime(performance.now());
+    if (!_M.currentImg) return;
+    _M.initMeltState();
+    _M.setLastFrameTime(performance.now());
   };
   
   // Upload
   document.getElementById('uploadBtn').onclick = () => fileInput.click();
   
-  // ── Sync UI to settings ──
+  // ── Sync UI to _M.settings ──
   function syncUIToSettings() {
-    speedRange.value = settings.speedMult; speedVal.textContent = settings.speedMult.toFixed(1)+'×';
-    originRange.value = settings.meltOrigin; originVal.textContent = settings.meltOrigin+'%';
-    spreadRange.value = settings.meltSpread; spreadVal.textContent = settings.meltSpread+'%';
-    stripRange.value = settings.stripWidth; stripVal.textContent = settings.stripWidth+'%';
-    bandGapRange.value = settings.bandGap; bandGapVal.textContent = settings.bandGap+'%';
-    tintRange.value = Math.round(settings.tintStrength*100); tintVal.textContent = Math.round(settings.tintStrength*100)+'%';
-    satRange.value = settings.saturation; satVal.textContent = settings.saturation+'%';
-    conRange.value = settings.contrast; conVal.textContent = settings.contrast+'%';
+    speedRange.value = _M.settings.speedMult; speedVal.textContent = _M.settings.speedMult.toFixed(1)+'×';
+    originRange.value = _M.settings.meltOrigin; originVal.textContent = _M.settings.meltOrigin+'%';
+    spreadRange.value = _M.settings.meltSpread; spreadVal.textContent = _M.settings.meltSpread+'%';
+    stripRange.value = _M.settings.stripWidth; stripVal.textContent = _M.settings.stripWidth+'%';
+    bandGapRange.value = _M.settings.bandGap; bandGapVal.textContent = _M.settings.bandGap+'%';
+    tintRange.value = Math.round(_M.settings.tintStrength*100); tintVal.textContent = Math.round(_M.settings.tintStrength*100)+'%';
+    satRange.value = _M.settings.saturation; satVal.textContent = _M.settings.saturation+'%';
+    conRange.value = _M.settings.contrast; conVal.textContent = _M.settings.contrast+'%';
   
     dirSeg.querySelectorAll('.seg').forEach(b => {
-      b.classList.toggle('active', b.dataset.dir === settings.direction);
+      b.classList.toggle('active', b.dataset.dir === _M.settings.direction);
     });
   
-    bounceToggle.classList.toggle('on', settings.bounce);
-    bounceLabel.textContent = settings.bounce ? 'ON' : 'OFF';
-    bounceRangeWrap.style.display = settings.bounce ? 'block' : 'none';
-    bounceRangeSlider.value = settings.bounceRange;
-    bounceRangeVal.textContent = settings.bounceRange + '%';
-    layeredToggle.classList.toggle('on', settings.layeredMelt);
-    layeredLabel.textContent = settings.layeredMelt ? 'ON' : 'OFF';
-    layeredHint.style.display = settings.layeredMelt ? 'block' : 'none';
-    bandGapWrap.style.display = settings.layeredMelt ? 'block' : 'none';
+    bounceToggle.classList.toggle('on', _M.settings.bounce);
+    bounceLabel.textContent = _M.settings.bounce ? 'ON' : 'OFF';
+    bounceRangeWrap.style.display = _M.settings.bounce ? 'block' : 'none';
+    bounceRangeSlider.value = _M.settings.bounceRange;
+    bounceRangeVal.textContent = _M.settings.bounceRange + '%';
+    layeredToggle.classList.toggle('on', _M.settings.layeredMelt);
+    layeredLabel.textContent = _M.settings.layeredMelt ? 'ON' : 'OFF';
+    layeredHint.style.display = _M.settings.layeredMelt ? 'block' : 'none';
+    bandGapWrap.style.display = _M.settings.layeredMelt ? 'block' : 'none';
   
-    bgToggle.classList.toggle('on', settings.bgEnabled);
-    bgToggleLabel.textContent = settings.bgEnabled ? 'ON' : 'OFF';
-    bgOptions.classList.toggle('visible', settings.bgEnabled);
+    bgToggle.classList.toggle('on', _M.settings.bgEnabled);
+    bgToggleLabel.textContent = _M.settings.bgEnabled ? 'ON' : 'OFF';
+    bgOptions.classList.toggle('visible', _M.settings.bgEnabled);
   
     bgModeSeg.querySelectorAll('.seg').forEach(b => {
-      b.classList.toggle('active', b.dataset.mode === settings.bgMode);
+      b.classList.toggle('active', b.dataset.mode === _M.settings.bgMode);
     });
-    bgSolidRow.style.display = settings.bgMode === 'solid' ? 'flex' : 'none';
-    bgGradRow.style.display = settings.bgMode === 'gradient' ? 'flex' : 'none';
-    bgBwRow.style.display = settings.bgMode === 'bw' ? 'flex' : 'none';
-    document.getElementById('bgColor1').value = settings.bgSolid;
-    document.getElementById('bgGradTop').value = settings.bgGradTop;
-    document.getElementById('bgGradBot').value = settings.bgGradBot;
+    bgSolidRow.style.display = _M.settings.bgMode === 'solid' ? 'flex' : 'none';
+    bgGradRow.style.display = _M.settings.bgMode === 'gradient' ? 'flex' : 'none';
+    bgBwRow.style.display = _M.settings.bgMode === 'bw' ? 'flex' : 'none';
+    document.getElementById('bgColor1').value = _M.settings.bgSolid;
+    document.getElementById('bgGradTop').value = _M.settings.bgGradTop;
+    document.getElementById('bgGradBot').value = _M.settings.bgGradBot;
   
     document.querySelectorAll('.swatch').forEach(s => {
-      s.classList.toggle('active', s.dataset.preset === settings.colorPreset);
+      s.classList.toggle('active', s.dataset.preset === _M.settings.colorPreset);
     });
   
     // Remove BG
-    removeBgToggle.classList.toggle('on', settings.removeBg);
-    removeBgLabel.textContent = settings.removeBg ? 'ON' : 'OFF';
+    removeBgToggle.classList.toggle('on', _M.settings.removeBg);
+    removeBgLabel.textContent = _M.settings.removeBg ? 'ON' : 'OFF';
     removeBgStatus.style.display = 'none';
   }
   
   // Reset ALL to defaults
   document.getElementById('defaultsBtn').onclick = () => {
-    Object.assign(settings, JSON.parse(JSON.stringify(DEFAULT_SETTINGS)));
+    Object.assign(_M.settings, JSON.parse(JSON.stringify(_M.DEFAULT_SETTINGS)));
     syncUIToSettings();
-    buildColorOverlay();
-    if (currentImg) { initMeltState(); setLastFrameTime(performance.now()); }
+    _M.buildColorOverlay();
+    if (_M.currentImg) { _M.initMeltState(); _M.setLastFrameTime(performance.now()); }
   };
   Object.defineProperty(_M, 'resetRemoveBgCache', { get: () => resetRemoveBgCache, configurable: true });
 })();
 
 // ── js/main.js ──
 (() => {
-  const settings = _M.settings;
-  const init = _M.init;
-  const setDOMRefs = _M.setDOMRefs;
-  const imgH = _M.imgH;
-  const running = _M.running;
-  const resetRemoveBgCache = _M.resetRemoveBgCache;
   // ══════════════════════════════════════════════
   //  DOM SETUP
   // ══════════════════════════════════════════════
@@ -2073,15 +2055,15 @@ const _M = {};
   const panel = document.getElementById('panel');
   
   // Pass DOM refs to engine
-  setDOMRefs(canvas, ctx, panel);
+  _M.setDOMRefs(canvas, ctx, panel);
   
   // ══════════════════════════════════════════════
   //  IMAGE LOADING
   // ══════════════════════════════════════════════
   function handleImage(file) {
-    resetRemoveBgCache();
+    _M.resetRemoveBgCache();
     const r = new FileReader();
-    r.onload = e => { const img = new Image(); img.onload = () => init(img); img.src = e.target.result; };
+    r.onload = e => { const img = new Image(); img.onload = () => _M.init(img); img.src = e.target.result; };
     r.readAsDataURL(file);
   }
   fileInput.addEventListener('change', e => { if (e.target.files[0]) handleImage(e.target.files[0]); });
@@ -2114,7 +2096,7 @@ const _M = {};
   
   canvas.addEventListener('wheel', e => {
     e.preventDefault();
-    const oldZ = settings.zoom;
+    const oldZ = _M.settings.zoom;
     const factor = e.deltaY > 0 ? 0.9 : 1.1;
     const newZ = Math.min(8, Math.max(0.3, oldZ * factor));
   
@@ -2124,11 +2106,11 @@ const _M = {};
     const pw = getPanelOffset();
     const cw = canvas.width, ch = canvas.height;
     const pivotX = pw + (cw - pw) / 2;
-    const pivotY = ch * 0.04 + (imgH || 0) / 2;
+    const pivotY = ch * 0.04 + (_M.imgH || 0) / 2;
   
-    settings.panX += (mx - pivotX - settings.panX) * (1 - newZ / oldZ);
-    settings.panY += (my - pivotY - settings.panY) * (1 - newZ / oldZ);
-    settings.zoom = newZ;
+    _M.settings.panX += (mx - pivotX - _M.settings.panX) * (1 - newZ / oldZ);
+    _M.settings.panY += (my - pivotY - _M.settings.panY) * (1 - newZ / oldZ);
+    _M.settings.zoom = newZ;
   }, { passive: false });
   
   // ══════════════════════════════════════════════
@@ -2139,13 +2121,13 @@ const _M = {};
   canvas.addEventListener('mousedown', e => {
     isDragging = true;
     dragStartX = e.clientX; dragStartY = e.clientY;
-    panStartX = settings.panX; panStartY = settings.panY;
+    panStartX = _M.settings.panX; panStartY = _M.settings.panY;
     canvas.classList.add('dragging');
   });
   window.addEventListener('mousemove', e => {
     if (!isDragging) return;
-    settings.panX = panStartX + (e.clientX - dragStartX);
-    settings.panY = panStartY + (e.clientY - dragStartY);
+    _M.settings.panX = panStartX + (e.clientX - dragStartX);
+    _M.settings.panY = panStartY + (e.clientY - dragStartY);
   });
   window.addEventListener('mouseup', () => {
     isDragging = false;
@@ -2156,7 +2138,7 @@ const _M = {};
   //  RESIZE
   // ══════════════════════════════════════════════
   window.addEventListener('resize', () => {
-    if (!running) return;
+    if (!_M.running) return;
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
   });

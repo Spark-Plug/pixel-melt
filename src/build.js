@@ -46,24 +46,36 @@ function processModule(filePath) {
     .replace(/^export\s*\{[^}]*\}\s*;?\s*$/gm, '')
     .trim();
 
-  // Generate imports: pull names from _M at top of IIFE body
-  const imports = [];
+  // Collect imports: map local name → _M.origName
+  const importMap = {};
   code.replace(/^import\s*\{([^}]+)\}\s*from\s*['"]([^'"]+)['"];?\s*$/gm, (_, names, from) => {
     names.split(',').forEach(n => {
       const parts = n.trim().split(/\s+as\s+/);
       const orig = parts[0].trim();
       const local = (parts[1] || parts[0]).trim();
-      if (orig) imports.push(`const ${local} = _M.${orig};`);
+      if (orig) importMap[local] = orig;
     });
   });
 
-  // Generate the IIFE wrapper
-  const importsBlock = imports.length ? imports.join('\n  ') + '\n  ' : '';
+  // Rewrite identifier usages of imported names to `_M.origName` for live bindings.
+  // This keeps ES module semantics (imports stay live even if the exporting module
+  // reassigns a `let` variable later, e.g. currentImg = newImage).
+  // Match word-boundary identifier, not preceded by `.` or `$` or word chars,
+  // and not part of object key `X:` or property `.X` or declaration.
+  for (const [local, orig] of Object.entries(importMap)) {
+    const re = new RegExp(
+      `(^|[^\\w$.])${local.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}(?=[^\\w$:]|$)`,
+      'gm'
+    );
+    body = body.replace(re, (m, p1) => `${p1}_M.${orig}`);
+  }
+
+  // Generate exports: define getter on _M that reads current value
   const exportsBlock = exports.length
     ? '\n  ' + exports.map(n => `Object.defineProperty(_M, '${n}', { get: () => ${n}, configurable: true });`).join('\n  ')
     : '';
 
-  return `// ── ${filePath} ──\n(() => {\n  ${importsBlock}${body.replace(/\n/g, '\n  ')}${exportsBlock}\n})();`;
+  return `// ── ${filePath} ──\n(() => {\n  ${body.replace(/\n/g, '\n  ')}${exportsBlock}\n})();`;
 }
 
 const mergedJS = '// Shared module registry\nconst _M = {};\n\n' + jsFiles.map(processModule).join('\n\n');
