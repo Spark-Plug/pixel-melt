@@ -9,6 +9,21 @@ const panel = document.getElementById('panel');
 const panelToggle = document.getElementById('panelToggle');
 const fileInput = document.getElementById('fileInput');
 
+// ── Theme toggle ──
+const themeBtn = document.getElementById('themeBtn');
+function applyTheme(theme) {
+  document.body.setAttribute('data-theme', theme);
+  themeBtn.textContent = theme === 'dark' ? 'RETRO' : 'MODERN';
+  try { localStorage.setItem('pixelmelt-theme', theme); } catch(e) {}
+}
+const savedTheme = (() => { try { return localStorage.getItem('pixelmelt-theme'); } catch(e) { return null; } })();
+if (savedTheme) applyTheme(savedTheme);
+
+themeBtn.onclick = () => {
+  const current = document.body.getAttribute('data-theme') || 'dark';
+  applyTheme(current === 'dark' ? 'retro' : 'dark');
+};
+
 // Panel toggle
 panelToggle.onclick = () => {
   panel.classList.toggle('collapsed');

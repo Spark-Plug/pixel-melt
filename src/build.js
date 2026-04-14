@@ -14,6 +14,7 @@ const DIST = path.join(__dirname, '..', 'dist');
 // Read source files
 const html = fs.readFileSync(path.join(SRC, 'index.html'), 'utf-8');
 const css = fs.readFileSync(path.join(SRC, 'style.css'), 'utf-8');
+const retroCss = fs.readFileSync(path.join(SRC, 'theme-retro.css'), 'utf-8');
 
 // JS modules in dependency order (settings → engine → controls → main)
 const jsFiles = ['js/settings.js', 'js/engine.js', 'js/controls.js', 'js/main.js'];
@@ -38,6 +39,12 @@ const mergedJS = jsContents.map(stripModuleSyntax).join('\n\n');
 let output = html.replace(
   /<link\s+rel="stylesheet"\s+href="style\.css"\s*\/?>/,
   `<style>\n${css}\n</style>`
+);
+
+// Inline retro theme CSS
+output = output.replace(
+  /<link\s+rel="stylesheet"\s+href="theme-retro\.css"\s*\/?>/,
+  `<style>\n${retroCss}\n</style>`
 );
 
 // Replace <script type="module" src="..."> with inline <script>

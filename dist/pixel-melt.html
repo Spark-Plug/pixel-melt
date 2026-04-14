@@ -6,90 +6,167 @@
 <title>PIXEL MELT — TOOL</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap');
+
+/* ══════════════════════════════════════════════
+   THEME: CSS VARIABLES (dark = default)
+   ══════════════════════════════════════════════ */
+:root, [data-theme="dark"] {
+  --font: 'JetBrains Mono', 'Courier New', monospace;
+  --bg: #0a0a0c;
+  --panel-bg: rgba(10,10,14,0.94);
+  --panel-border: rgba(255,255,255,0.06);
+  --panel-blur: blur(12px);
+  --panel-w: 260px;
+  --text: rgba(200,205,200,0.75);
+  --text-dim: rgba(255,255,255,0.25);
+  --text-mid: rgba(255,255,255,0.3);
+  --text-bright: rgba(255,255,255,0.5);
+  --text-hi: rgba(255,255,255,0.7);
+  --text-muted: rgba(255,255,255,0.15);
+  --text-hint: rgba(255,255,255,0.13);
+  --ctrl-border: rgba(255,255,255,0.03);
+  --input-bg: rgba(255,255,255,0.12);
+  --input-thumb: #fff;
+  --toggle-bg: rgba(255,255,255,0.08);
+  --toggle-border: rgba(255,255,255,0.1);
+  --toggle-knob: rgba(255,255,255,0.3);
+  --toggle-on-bg: rgba(255,255,255,0.15);
+  --toggle-on-knob: rgba(255,255,255,0.7);
+  --seg-border: rgba(255,255,255,0.08);
+  --seg-hover-bg: rgba(255,255,255,0.03);
+  --seg-active-bg: rgba(255,255,255,0.06);
+  --btn-border: rgba(255,255,255,0.1);
+  --btn-hover-border: rgba(255,255,255,0.3);
+  --btn-hover-bg: rgba(255,255,255,0.03);
+  --swatch-border: rgba(255,255,255,0.06);
+  --swatch-active-border: rgba(255,255,255,0.5);
+  --section-label: rgba(255,255,255,0.12);
+  --section-line: rgba(255,255,255,0.06);
+  --scrollbar-thumb: rgba(255,255,255,0.08);
+  --loader-color: rgba(180,190,185,0.5);
+  --loader-border: rgba(180,190,185,0.12);
+}
+
 * { margin:0; padding:0; box-sizing:border-box; }
-body { overflow:hidden; background:#0a0a0c; height:100vh; font-family:'JetBrains Mono','Courier New',monospace; color:rgba(200,205,200,0.75); }
+body { overflow:hidden; background:var(--bg); height:100vh; font-family:var(--font); color:var(--text); }
 canvas { position:fixed; inset:0; z-index:0; cursor:grab; }
 canvas.dragging { cursor:grabbing; }
 
 /* ═══════ LOADER ═══════ */
 #loader {
   position:fixed; inset:0; display:flex; flex-direction:column;
-  justify-content:center; align-items:center; background:#0a0a0c;
-  z-index:200; color:rgba(180,190,185,0.5); font-size:11px; letter-spacing:4px;
-  cursor:pointer; transition:opacity .8s;
+  justify-content:center; align-items:center; background:var(--bg);
+  z-index:200; color:var(--loader-color); font-size:11px; letter-spacing:4px;
+  transition:opacity .8s;
 }
 #loader.hidden { opacity:0; pointer-events:none; }
-#loader .border {
-  width:220px; height:220px; border:1px solid rgba(180,190,185,0.12);
-  display:flex; flex-direction:column; justify-content:center; align-items:center; gap:14px;
+.loader-content {
+  display:flex; flex-direction:column; align-items:center; gap:24px;
+}
+.loader-title {
+  font-size:14px; font-weight:700; letter-spacing:8px; color:var(--text-bright);
+  text-transform:uppercase;
+}
+.loader-actions {
+  display:flex; gap:12px;
+}
+.loader-btn {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:8px; width:140px; height:100px;
+  background:none; border:1px solid var(--loader-border); color:var(--loader-color);
+  font-family:var(--font); font-size:9px; letter-spacing:2px; text-transform:uppercase;
+  cursor:pointer; transition:all .2s;
+}
+.loader-btn:hover {
+  border-color:var(--text-mid); color:var(--text-hi); background:rgba(255,255,255,0.03);
+}
+.loader-hint {
+  font-size:7px; letter-spacing:3px; color:var(--text-hint); text-transform:uppercase;
 }
 #fileInput { display:none; }
 
 /* ═══════ PANEL ═══════ */
 #panel {
-  position:fixed; left:0; top:0; bottom:0; width:260px;
-  background:rgba(10,10,14,0.94); border-right:1px solid rgba(255,255,255,0.06);
+  position:fixed; left:0; top:0; bottom:0; width:var(--panel-w);
+  background:var(--panel-bg); border-right:1px solid var(--panel-border);
   z-index:100; display:flex; flex-direction:column; transition:transform .35s ease;
-  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  backdrop-filter:var(--panel-blur); -webkit-backdrop-filter:var(--panel-blur);
   user-select:none;
 }
-#panel.collapsed { transform:translateX(-260px); }
+#panel.collapsed { transform:translateX(calc(var(--panel-w) * -1)); }
 
 .p-head {
-  padding:20px 18px 14px; border-bottom:1px solid rgba(255,255,255,0.06);
+  padding:20px 18px 14px; border-bottom:1px solid var(--panel-border);
   display:flex; justify-content:space-between; align-items:center;
 }
 .p-head .title {
   font-size:10px; font-weight:700; letter-spacing:5px;
-  text-transform:uppercase; color:rgba(255,255,255,0.4);
+  text-transform:uppercase; color:var(--text-bright);
 }
 .p-head .ver {
-  font-size:8px; letter-spacing:2px; color:rgba(255,255,255,0.15); margin-top:3px;
+  font-size:8px; letter-spacing:2px; color:var(--text-muted); margin-top:3px;
 }
 
+/* Theme toggle — fixed top-right corner, always visible */
+#themeBtn {
+  position:fixed; top:14px; right:14px; z-index:201;
+  background:none; border:1px solid var(--btn-border); color:var(--text-dim);
+  font-family:var(--font); font-size:7px; letter-spacing:1.5px; text-transform:uppercase;
+  padding:5px 10px; cursor:pointer; transition:all .2s;
+}
+#themeBtn:hover { border-color:var(--btn-hover-border); color:var(--text-hi); }
+
 #panelToggle {
-  position:fixed; left:260px; top:50%; transform:translateY(-50%);
-  width:22px; height:48px; background:rgba(10,10,14,0.85);
-  border:1px solid rgba(255,255,255,0.06); border-left:none;
-  color:rgba(255,255,255,0.25); font-size:10px; cursor:pointer;
+  position:fixed; left:var(--panel-w); top:50%; transform:translateY(-50%);
+  width:22px; height:48px; background:var(--panel-bg);
+  border:1px solid var(--panel-border); border-left:none;
+  color:var(--text-dim); font-size:10px; cursor:pointer;
   z-index:101; display:flex; align-items:center; justify-content:center;
   transition:left .35s ease, background .2s;
   backdrop-filter:blur(8px);
 }
-#panelToggle:hover { background:rgba(30,30,40,0.95); color:rgba(255,255,255,0.5); }
-#panel.collapsed ~ #panelToggle { left:0; border-left:1px solid rgba(255,255,255,0.06); }
+#panelToggle:hover { color:var(--text-bright); }
+#panel.collapsed ~ #panelToggle { left:0; border-left:1px solid var(--panel-border); }
 
 .p-body {
-  flex:1; overflow-y:auto; padding:8px 0;
-  scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.08) transparent;
+  flex:1; overflow-y:auto; padding:4px 0;
+  scrollbar-width:thin; scrollbar-color:var(--scrollbar-thumb) transparent;
 }
 .p-body::-webkit-scrollbar { width:3px; }
-.p-body::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.08); }
+.p-body::-webkit-scrollbar-thumb { background:var(--scrollbar-thumb); }
+
+/* ─── Section headers ─── */
+.section-head {
+  padding:12px 18px 4px; font-size:7px; font-weight:700; letter-spacing:3px;
+  text-transform:uppercase; color:var(--section-label);
+  border-top:1px solid var(--section-line);
+}
+.section-head:first-child { border-top:none; }
 
 /* ─── Controls ─── */
 .ctrl {
-  padding:14px 18px 12px; border-bottom:1px solid rgba(255,255,255,0.03);
+  padding:10px 18px 8px; border-bottom:1px solid var(--ctrl-border);
 }
 .ctrl-label {
   font-size:9px; font-weight:500; letter-spacing:3px; text-transform:uppercase;
-  color:rgba(255,255,255,0.3); margin-bottom:10px; display:flex;
+  color:var(--text-mid); margin-bottom:10px; display:flex;
   justify-content:space-between; align-items:center;
 }
 .ctrl-val {
-  font-weight:300; color:rgba(255,255,255,0.5); letter-spacing:1px; font-size:9px;
+  font-weight:300; color:var(--text-bright); letter-spacing:1px; font-size:9px;
 }
 
 /* Range slider */
 input[type=range] {
   -webkit-appearance:none; appearance:none; width:100%; height:1px;
-  background:rgba(255,255,255,0.12); outline:none; cursor:pointer;
+  background:var(--input-bg); outline:none; cursor:pointer;
 }
 input[type=range]::-webkit-slider-thumb {
-  -webkit-appearance:none; width:8px; height:8px; background:#fff;
+  -webkit-appearance:none; width:8px; height:8px; background:var(--input-thumb);
   border:none; cursor:pointer; margin-top:0;
 }
 input[type=range]::-moz-range-thumb {
-  width:8px; height:8px; background:#fff; border:none; cursor:pointer; border-radius:0;
+  width:8px; height:8px; background:var(--input-thumb); border:none; cursor:pointer; border-radius:0;
 }
 input[type=range]::-webkit-slider-runnable-track { height:1px; }
 
@@ -98,11 +175,11 @@ input[type=range]::-webkit-slider-runnable-track { height:1px; }
   display:grid; grid-template-columns:repeat(3,1fr); gap:6px;
 }
 .swatch {
-  height:28px; cursor:pointer; border:1px solid rgba(255,255,255,0.06);
+  height:28px; cursor:pointer; border:1px solid var(--swatch-border);
   transition:border-color .2s, transform .15s; position:relative;
 }
-.swatch:hover { border-color:rgba(255,255,255,0.2); transform:scale(1.04); }
-.swatch.active { border-color:rgba(255,255,255,0.5); }
+.swatch:hover { border-color:var(--text-dim); transform:scale(1.04); }
+.swatch.active { border-color:var(--swatch-active-border); }
 .swatch .swatch-label {
   position:absolute; bottom:2px; left:0; right:0; text-align:center;
   font-size:7px; letter-spacing:1.5px; color:rgba(255,255,255,0.55);
@@ -112,43 +189,41 @@ input[type=range]::-webkit-slider-runnable-track { height:1px; }
 /* Toggle */
 .toggle-row { display:flex; align-items:center; gap:10px; }
 .toggle-switch {
-  width:34px; height:14px; background:rgba(255,255,255,0.08);
-  border:1px solid rgba(255,255,255,0.1); cursor:pointer; position:relative;
+  width:34px; height:14px; background:var(--toggle-bg);
+  border:1px solid var(--toggle-border); cursor:pointer; position:relative;
   transition:background .2s;
 }
-.toggle-switch.on { background:rgba(255,255,255,0.15); }
+.toggle-switch.on { background:var(--toggle-on-bg); }
 .toggle-switch::after {
   content:''; position:absolute; top:1px; left:2px;
-  width:10px; height:10px; background:rgba(255,255,255,0.3);
+  width:10px; height:10px; background:var(--toggle-knob);
   transition:left .2s, background .2s;
 }
-.toggle-switch.on::after { left:20px; background:rgba(255,255,255,0.7); }
-.toggle-label { font-size:8px; letter-spacing:2px; color:rgba(255,255,255,0.25); }
+.toggle-switch.on::after { left:20px; background:var(--toggle-on-knob); }
+.toggle-label { font-size:8px; letter-spacing:2px; color:var(--text-dim); }
 
 /* Segmented control */
 .seg-ctrl {
-  display:flex; border:1px solid rgba(255,255,255,0.08); margin-bottom:10px;
+  display:flex; border:1px solid var(--seg-border); margin-bottom:10px;
 }
 .seg {
-  flex:1; padding:6px 0; background:transparent; border:none; border-right:1px solid rgba(255,255,255,0.06);
-  color:rgba(255,255,255,0.25); font-family:inherit; font-size:8px; letter-spacing:2px;
+  flex:1; padding:6px 0; background:transparent; border:none; border-right:1px solid var(--panel-border);
+  color:var(--text-dim); font-family:var(--font); font-size:8px; letter-spacing:2px;
   text-transform:uppercase; cursor:pointer; transition:background .2s, color .2s;
 }
 .seg:last-child { border-right:none; }
-.seg:hover { color:rgba(255,255,255,0.4); background:rgba(255,255,255,0.03); }
-.seg.active { color:rgba(255,255,255,0.7); background:rgba(255,255,255,0.06); }
+.seg:hover { color:var(--text-mid); background:var(--seg-hover-bg); }
+.seg.active { color:var(--text-hi); background:var(--seg-active-bg); }
 
 /* Color inputs */
 .color-row { display:flex; gap:8px; align-items:center; }
-.color-wrap {
-  display:flex; align-items:center; gap:6px;
-}
+.color-wrap { display:flex; align-items:center; gap:6px; }
 .color-wrap label {
-  font-size:7px; letter-spacing:2px; color:rgba(255,255,255,0.2); text-transform:uppercase;
+  font-size:7px; letter-spacing:2px; color:var(--text-muted); text-transform:uppercase;
 }
 input[type=color] {
   -webkit-appearance:none; appearance:none; width:28px; height:18px;
-  background:none; border:1px solid rgba(255,255,255,0.12); cursor:pointer; padding:0;
+  background:none; border:1px solid var(--input-bg); cursor:pointer; padding:0;
 }
 input[type=color]::-webkit-color-swatch-wrapper { padding:1px; }
 input[type=color]::-webkit-color-swatch { border:none; }
@@ -156,44 +231,323 @@ input[type=color]::-webkit-color-swatch { border:none; }
 /* BW selector */
 .bw-row { display:flex; gap:6px; }
 .bw-btn {
-  width:32px; height:20px; border:1px solid rgba(255,255,255,0.1); cursor:pointer;
+  width:32px; height:20px; border:1px solid var(--toggle-border); cursor:pointer;
   transition:border-color .2s;
 }
-.bw-btn.active { border-color:rgba(255,255,255,0.5); }
+.bw-btn.active { border-color:var(--swatch-active-border); }
 
 /* Action buttons */
 .ctrl-actions {
-  padding:16px 18px; display:flex; gap:8px;
+  padding:10px 18px; display:flex; gap:8px;
 }
 .btn {
-  flex:1; padding:8px 0; background:transparent; border:1px solid rgba(255,255,255,0.1);
-  color:rgba(255,255,255,0.4); font-family:inherit; font-size:8px; letter-spacing:2px;
+  flex:1; padding:8px 0; background:transparent; border:1px solid var(--btn-border);
+  color:var(--text-mid); font-family:var(--font); font-size:8px; letter-spacing:2px;
   text-transform:uppercase; cursor:pointer; transition:all .2s;
 }
-.btn:hover { border-color:rgba(255,255,255,0.3); color:rgba(255,255,255,0.7); background:rgba(255,255,255,0.03); }
+.btn:hover { border-color:var(--btn-hover-border); color:var(--text-hi); background:var(--btn-hover-bg); }
 
 /* Sub-controls */
 .ctrl-sub { margin-top:10px; }
 .ctrl-sub .ctrl-label { margin-bottom:6px; }
 .ctrl-hint-inline {
   margin-top:4px; font-size:6.5px; letter-spacing:1.5px;
-  color:rgba(255,255,255,0.13); text-transform:uppercase;
+  color:var(--text-hint); text-transform:uppercase;
 }
 
 /* Sub-options visibility */
 .sub-options { display:none; }
 .sub-options.visible { display:block; }
 
+
+</style>
+<style>
+/* ══════════════════════════════════════════════
+   THEME: WIN98 / VAPORWAVE RETRO
+   ══════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+[data-theme="retro"] {
+  --font: 'VT323', 'MS Sans Serif', Tahoma, system-ui, sans-serif;
+  --bg: #008080;
+  --panel-bg: #c0c0c0;
+  --panel-border: #808080;
+  --panel-blur: none;
+  --panel-w: 280px;
+  --text: #000;
+  --text-dim: #444;
+  --text-mid: #222;
+  --text-bright: #000;
+  --text-hi: #000;
+  --text-muted: #666;
+  --text-hint: #888;
+  --ctrl-border: #a0a0a0;
+  --input-bg: #fff;
+  --input-thumb: #000;
+  --toggle-bg: #fff;
+  --toggle-border: #808080;
+  --toggle-knob: #808080;
+  --toggle-on-bg: #00807f;
+  --toggle-on-knob: #fff;
+  --seg-border: #808080;
+  --seg-hover-bg: #d4d0c8;
+  --seg-active-bg: #00807f;
+  --btn-border: #808080;
+  --btn-hover-border: #000;
+  --btn-hover-bg: #d4d0c8;
+  --swatch-border: #808080;
+  --swatch-active-border: #ff00ff;
+  --section-label: #00807f;
+  --section-line: #808080;
+  --scrollbar-thumb: #808080;
+  --loader-color: #00ffff;
+  --loader-border: #ff00ff;
+  /* retro-specific */
+  --win-title-bg: linear-gradient(90deg, #000080, #1084d0);
+  --win-title-color: #fff;
+  --accent-cyan: #00ffff;
+  --accent-magenta: #ff00ff;
+  --accent-purple: #8000ff;
+  --retro-highlight: #ffffff;
+  --retro-shadow: #808080;
+  --retro-dark-shadow: #404040;
+}
+
+/* ═══════ BODY / CANVAS ═══════ */
+[data-theme="retro"] {
+  cursor: default;
+}
+
+/* ═══════ LOADER ═══════ */
+[data-theme="retro"] #loader {
+  background: #008080;
+  font-family: var(--font);
+  font-size: 18px;
+  letter-spacing: 1px;
+  color: #00ffff;
+}
+[data-theme="retro"] .loader-content {
+  background: #c0c0c0; border: 2px outset #fff;
+  padding: 0 0 20px; gap: 0; min-width: 360px;
+}
+[data-theme="retro"] .loader-content::before {
+  content: 'pixel_melt.exe';
+  display: block; width: 100%; padding: 4px 8px;
+  background: var(--win-title-bg);
+  color: var(--win-title-color);
+  font-size: 16px; font-weight: 700; letter-spacing: 0;
+  margin-bottom: 16px;
+}
+[data-theme="retro"] .loader-title {
+  color: #000; font-size: 18px; letter-spacing: 2px;
+}
+[data-theme="retro"] .loader-btn {
+  background: #c0c0c0; border: 2px outset #fff;
+  color: #000; font-size: 13px; letter-spacing: 0;
+  width: 150px; height: 80px; font-family: var(--font);
+}
+[data-theme="retro"] .loader-btn:hover { background: #d4d0c8; }
+[data-theme="retro"] .loader-btn:active { border-style: inset; }
+[data-theme="retro"] .loader-hint {
+  color: #666; font-size: 12px; letter-spacing: 0;
+}
+
+/* ═══════ PANEL ═══════ */
+[data-theme="retro"] #panel {
+  border-right: 2px outset #fff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #808080;
+}
+
+/* Title bar */
+[data-theme="retro"] .p-head {
+  background: var(--win-title-bg);
+  border-bottom: 2px outset #fff;
+  padding: 6px 8px;
+}
+[data-theme="retro"] .p-head .title {
+  color: #fff; font-size: 16px; font-weight: 700;
+  letter-spacing: 1px;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+}
+[data-theme="retro"] .p-head .ver {
+  color: rgba(255,255,255,0.7); font-size: 12px;
+  letter-spacing: 0; margin-top: 0;
+}
+
+/* Theme button — fixed corner */
+[data-theme="retro"] #themeBtn {
+  background: #c0c0c0;
+  border: 2px outset #fff;
+  color: #000; font-size: 14px; letter-spacing: 0;
+  padding: 3px 10px; font-family: var(--font);
+}
+[data-theme="retro"] #themeBtn:hover {
+  background: #d4d0c8;
+}
+[data-theme="retro"] #themeBtn:active {
+  border-style: inset;
+}
+
+/* Panel toggle */
+[data-theme="retro"] #panelToggle {
+  background: #c0c0c0;
+  border: 2px outset #fff; border-left: none;
+  color: #000; font-size: 14px;
+  backdrop-filter: none;
+}
+[data-theme="retro"] #panel.collapsed ~ #panelToggle {
+  border-left: 2px outset #fff;
+}
+
+/* Scrollbar */
+[data-theme="retro"] .p-body {
+  scrollbar-color: #c0c0c0 #d4d0c8;
+}
+[data-theme="retro"] .p-body::-webkit-scrollbar { width: 16px; background: #d4d0c8; }
+[data-theme="retro"] .p-body::-webkit-scrollbar-thumb {
+  background: #c0c0c0; border: 2px outset #fff;
+}
+
+/* ═══════ SECTION HEADERS ═══════ */
+[data-theme="retro"] .section-head {
+  font-size: 13px; letter-spacing: 1px;
+  color: #000080; font-weight: 700;
+  border-top: 1px solid #808080;
+  padding: 10px 10px 4px;
+  text-shadow: none;
+}
+
+/* ═══════ CONTROLS ═══════ */
+[data-theme="retro"] .ctrl {
+  border-bottom: 1px solid #a0a0a0;
+  padding: 8px 10px 6px;
+}
+[data-theme="retro"] .ctrl-label {
+  font-size: 14px; letter-spacing: 0.5px;
+  color: #000; font-weight: 400; margin-bottom: 8px;
+}
+[data-theme="retro"] .ctrl-val {
+  font-size: 14px; color: #000080; letter-spacing: 0;
+}
+
+/* ═══════ RANGE SLIDERS ═══════ */
+[data-theme="retro"] input[type=range] {
+  height: 4px; background: #808080;
+  border: 1px inset #808080;
+}
+[data-theme="retro"] input[type=range]::-webkit-slider-thumb {
+  width: 12px; height: 20px; background: #c0c0c0;
+  border: 2px outset #fff; margin-top: -8px;
+}
+[data-theme="retro"] input[type=range]::-moz-range-thumb {
+  width: 12px; height: 20px; background: #c0c0c0;
+  border: 2px outset #fff; border-radius: 0;
+}
+[data-theme="retro"] input[type=range]::-webkit-slider-runnable-track {
+  height: 4px; background: #808080; border: 1px inset #808080;
+}
+
+/* ═══════ TOGGLE SWITCHES ═══════ */
+[data-theme="retro"] .toggle-switch {
+  width: 40px; height: 20px;
+  border: 2px inset #808080; background: #fff;
+}
+[data-theme="retro"] .toggle-switch.on {
+  background: #00807f;
+}
+[data-theme="retro"] .toggle-switch::after {
+  width: 14px; height: 14px; top: 1px; left: 2px;
+  background: #c0c0c0; border: 1px outset #fff;
+}
+[data-theme="retro"] .toggle-switch.on::after {
+  left: 22px; background: #fff; border-color: #fff;
+}
+[data-theme="retro"] .toggle-label {
+  font-size: 14px; letter-spacing: 0; color: #000;
+}
+
+/* ═══════ SEGMENTED CONTROLS ═══════ */
+[data-theme="retro"] .seg-ctrl {
+  border: 2px inset #808080;
+}
+[data-theme="retro"] .seg {
+  font-size: 13px; letter-spacing: 0.5px;
+  color: #000; border-right: 1px solid #808080;
+  padding: 4px 0; font-family: var(--font);
+}
+[data-theme="retro"] .seg:hover { background: #d4d0c8; color: #000; }
+[data-theme="retro"] .seg.active {
+  background: #000080; color: #fff;
+}
+
+/* ═══════ BUTTONS ═══════ */
+[data-theme="retro"] .btn {
+  background: #c0c0c0;
+  border: 2px outset #fff;
+  color: #000; font-size: 14px; letter-spacing: 0.5px;
+  padding: 6px 0; font-family: var(--font);
+}
+[data-theme="retro"] .btn:hover {
+  background: #d4d0c8; border-color: #fff; color: #000;
+}
+[data-theme="retro"] .btn:active {
+  border-style: inset;
+}
+
+/* ═══════ SWATCHES ═══════ */
+[data-theme="retro"] .swatch {
+  border: 2px inset #808080;
+  height: 32px;
+}
+[data-theme="retro"] .swatch:hover { border-color: #ff00ff; transform: none; }
+[data-theme="retro"] .swatch.active { border: 2px solid #ff00ff; }
+[data-theme="retro"] .swatch .swatch-label {
+  font-size: 11px; letter-spacing: 0; font-family: var(--font);
+  color: #fff; text-shadow: 1px 1px 0 #000;
+}
+
+/* ═══════ COLOR INPUTS ═══════ */
+[data-theme="retro"] input[type=color] {
+  border: 2px inset #808080; width: 32px; height: 22px;
+}
+[data-theme="retro"] .color-wrap label {
+  font-size: 12px; letter-spacing: 0; color: #000;
+}
+
+/* ═══════ BW BUTTONS ═══════ */
+[data-theme="retro"] .bw-btn {
+  border: 2px inset #808080; width: 36px; height: 24px;
+}
+[data-theme="retro"] .bw-btn.active { border: 2px solid #ff00ff; }
+
+/* ═══════ HINTS ═══════ */
+[data-theme="retro"] .ctrl-hint-inline {
+  font-size: 11px; letter-spacing: 0; color: #666;
+}
+
+
 </style>
 </head>
-<body>
+<body data-theme="dark">
 
 <!-- ═══════ LOADER ═══════ -->
-<div id="loader" onclick="document.getElementById('fileInput').click()">
-  <div class="border">
-    <div style="font-size:32px;opacity:0.25;">+</div>
-    <div>DROP IMAGE</div>
-    <div style="font-size:8px;opacity:0.3;margin-top:4px;">OR CLICK TO BROWSE</div>
+<div id="loader">
+  <div class="loader-content">
+    <div class="loader-title">PIXEL MELT</div>
+    <div class="loader-actions">
+      <button class="loader-btn" id="loaderUploadBtn">
+        <span style="font-size:18px;">+</span>
+        <span>UPLOAD IMAGE</span>
+      </button>
+      <button class="loader-btn" id="loaderStartBtn">
+        <span style="font-size:18px;">▶</span>
+        <span>START EMPTY</span>
+      </button>
+    </div>
+    <div class="loader-hint">OR DROP IMAGE ANYWHERE</div>
   </div>
   <input type="file" id="fileInput" accept="image/*">
 </div>
@@ -208,13 +562,24 @@ input[type=color]::-webkit-color-swatch { border:none; }
   </div>
   <div class="p-body">
 
-    <!-- SPEED -->
+    <!-- ── ACTIONS ── -->
+    <div class="section-head">ACTIONS</div>
+    <div class="ctrl-actions">
+      <button class="btn" id="resetBtn">↻ RESET</button>
+      <button class="btn" id="uploadBtn">+ IMAGE</button>
+    </div>
+    <div class="ctrl-actions" style="padding-top:0;">
+      <button class="btn" id="defaultsBtn" style="opacity:0.6;">⟲ DEFAULTS</button>
+    </div>
+
+    <!-- ── ANIMATION ── -->
+    <div class="section-head">ANIMATION</div>
+
     <div class="ctrl">
       <div class="ctrl-label">MELT SPEED <span class="ctrl-val" id="speedVal">1.0×</span></div>
       <input type="range" id="speedRange" min="0.1" max="5" step="0.1" value="1.0">
     </div>
 
-    <!-- DIRECTION -->
     <div class="ctrl">
       <div class="ctrl-label">DIRECTION</div>
       <div class="seg-ctrl" id="dirSeg">
@@ -224,7 +589,6 @@ input[type=color]::-webkit-color-swatch { border:none; }
       </div>
     </div>
 
-    <!-- BOUNCE -->
     <div class="ctrl">
       <div class="ctrl-label">BOUNCE</div>
       <div class="toggle-row">
@@ -238,104 +602,102 @@ input[type=color]::-webkit-color-swatch { border:none; }
       </div>
     </div>
 
-    <!-- LAYERED MELT -->
     <div class="ctrl">
       <div class="ctrl-label">LAYERED MELT</div>
       <div class="toggle-row">
         <div class="toggle-switch" id="layeredToggle"></div>
         <span class="toggle-label" id="layeredLabel">OFF</span>
       </div>
-      <div class="ctrl-hint" id="layeredHint" style="display:none; margin-top:8px; font-size:7px; letter-spacing:1px; color:rgba(255,255,255,0.18); line-height:1.6;">
+      <div class="ctrl-hint" id="layeredHint" style="display:none; margin-top:8px; font-size:7px; letter-spacing:1px; color:var(--text-hint); line-height:1.6;">
         BRIGHT → MID → DARK
       </div>
     </div>
 
-    <!-- MELT ZONE -->
+    <!-- ── MELT ZONE ── -->
+    <div class="section-head">MELT ZONE</div>
+
     <div class="ctrl">
-      <div class="ctrl-label" style="margin-bottom:4px;">MELT ZONE</div>
-      <div class="ctrl-sub">
-        <div class="ctrl-label">ORIGIN <span class="ctrl-val" id="originVal">35%</span></div>
-        <input type="range" id="originRange" min="0" max="95" step="1" value="35">
-        <div class="ctrl-hint-inline">0% = TOP &nbsp; 100% = BOTTOM</div>
-      </div>
-      <div class="ctrl-sub">
-        <div class="ctrl-label">SPREAD <span class="ctrl-val" id="spreadVal">40%</span></div>
-        <input type="range" id="spreadRange" min="0" max="100" step="1" value="40">
-      </div>
-      <div class="ctrl-sub">
-        <div class="ctrl-label">STRIP WIDTH <span class="ctrl-val" id="stripVal">30%</span></div>
-        <input type="range" id="stripRange" min="0" max="100" step="1" value="30">
-        <div class="ctrl-hint-inline">FINE ← → COARSE</div>
-      </div>
-      <div class="ctrl-sub" id="bandGapWrap" style="display:none;">
-        <div class="ctrl-label">BAND GAP <span class="ctrl-val" id="bandGapVal">50%</span></div>
-        <input type="range" id="bandGapRange" min="0" max="100" step="1" value="50">
-        <div class="ctrl-hint-inline">0 = ALL AT ONCE &nbsp; 100 = STAGGERED</div>
-      </div>
+      <div class="ctrl-label">ORIGIN <span class="ctrl-val" id="originVal">35%</span></div>
+      <input type="range" id="originRange" min="0" max="95" step="1" value="35">
+      <div class="ctrl-hint-inline">0% = TOP &nbsp; 100% = BOTTOM</div>
     </div>
 
-    <!-- COLOR TONE PRESETS -->
+    <div class="ctrl">
+      <div class="ctrl-label">SPREAD <span class="ctrl-val" id="spreadVal">40%</span></div>
+      <input type="range" id="spreadRange" min="0" max="100" step="1" value="40">
+    </div>
+
+    <div class="ctrl">
+      <div class="ctrl-label">STRIP WIDTH <span class="ctrl-val" id="stripVal">30%</span></div>
+      <input type="range" id="stripRange" min="0" max="100" step="1" value="30">
+      <div class="ctrl-hint-inline">FINE ← → COARSE</div>
+    </div>
+
+    <div class="ctrl" id="bandGapWrap" style="display:none;">
+      <div class="ctrl-label">BAND GAP <span class="ctrl-val" id="bandGapVal">50%</span></div>
+      <input type="range" id="bandGapRange" min="0" max="100" step="1" value="50">
+      <div class="ctrl-hint-inline">0 = ALL AT ONCE &nbsp; 100 = STAGGERED</div>
+    </div>
+
+    <!-- ── COLOR ── -->
+    <div class="section-head">COLOR</div>
+
     <div class="ctrl">
       <div class="ctrl-label">COLOR TONE</div>
       <div class="presets" id="presetGrid"></div>
     </div>
 
-    <!-- TINT STRENGTH -->
     <div class="ctrl">
       <div class="ctrl-label">TINT STRENGTH <span class="ctrl-val" id="tintVal">45%</span></div>
       <input type="range" id="tintRange" min="0" max="100" step="1" value="45">
     </div>
 
-    <!-- IMAGE ADJUST -->
     <div class="ctrl">
-      <div class="ctrl-label" style="margin-bottom:4px;">IMAGE ADJUST</div>
-      <div class="ctrl-sub">
-        <div class="ctrl-label">SATURATION <span class="ctrl-val" id="satVal">100%</span></div>
-        <input type="range" id="satRange" min="0" max="250" step="1" value="100">
-      </div>
-      <div class="ctrl-sub">
-        <div class="ctrl-label">CONTRAST <span class="ctrl-val" id="conVal">100%</span></div>
-        <input type="range" id="conRange" min="0" max="250" step="1" value="100">
-      </div>
+      <div class="ctrl-label">SATURATION <span class="ctrl-val" id="satVal">100%</span></div>
+      <input type="range" id="satRange" min="0" max="250" step="1" value="100">
     </div>
 
-    <!-- REMOVE BG (AI) -->
+    <div class="ctrl">
+      <div class="ctrl-label">CONTRAST <span class="ctrl-val" id="conVal">100%</span></div>
+      <input type="range" id="conRange" min="0" max="250" step="1" value="100">
+    </div>
+
+    <!-- ── IMAGE ── -->
+    <div class="section-head">IMAGE</div>
+
     <div class="ctrl">
       <div class="ctrl-label">REMOVE BG</div>
       <div class="toggle-row">
         <div class="toggle-switch" id="removeBgToggle"></div>
         <span class="toggle-label" id="removeBgLabel">OFF</span>
       </div>
-      <div id="removeBgStatus" style="display:none; margin-top:8px; font-size:7px; letter-spacing:1.5px; color:rgba(255,255,255,0.3);"></div>
+      <div id="removeBgStatus" style="display:none; margin-top:8px; font-size:7px; letter-spacing:1.5px; color:var(--text-mid);"></div>
       <div class="ctrl-hint-inline" style="margin-top:6px;">AI-POWERED &nbsp;·&nbsp; FIRST USE DOWNLOADS MODEL</div>
     </div>
 
-    <!-- BACKGROUND TOGGLE -->
+    <!-- ── BACKGROUND ── -->
+    <div class="section-head">BACKGROUND</div>
+
     <div class="ctrl">
-      <div class="ctrl-label">BACKGROUND</div>
       <div class="toggle-row">
         <div class="toggle-switch on" id="bgToggle"></div>
         <span class="toggle-label" id="bgToggleLabel">ON</span>
       </div>
     </div>
 
-    <!-- BG OPTIONS -->
     <div class="ctrl sub-options visible" id="bgOptions">
       <div class="seg-ctrl" id="bgModeSeg">
         <button class="seg active" data-mode="solid">SOLID</button>
         <button class="seg" data-mode="gradient">GRADIENT</button>
         <button class="seg" data-mode="bw">B&W</button>
       </div>
-      <!-- Solid color -->
       <div id="bgSolidRow" class="color-row">
         <div class="color-wrap"><label>COLOR</label><input type="color" id="bgColor1" value="#1e1e20"></div>
       </div>
-      <!-- Gradient colors -->
       <div id="bgGradRow" class="color-row" style="display:none;">
         <div class="color-wrap"><label>TOP</label><input type="color" id="bgGradTop" value="#1a0a1e"></div>
         <div class="color-wrap"><label>BOT</label><input type="color" id="bgGradBot" value="#0a1a1e"></div>
       </div>
-      <!-- B&W -->
       <div id="bgBwRow" class="bw-row" style="display:none;">
         <div class="bw-btn active" data-bw="#000000" style="background:#000"></div>
         <div class="bw-btn" data-bw="#0a0a0a" style="background:#0a0a0a"></div>
@@ -345,14 +707,7 @@ input[type=color]::-webkit-color-swatch { border:none; }
       </div>
     </div>
 
-    <!-- ACTIONS -->
-    <div class="ctrl-actions">
-      <button class="btn" id="resetBtn">↻ RESET</button>
-      <button class="btn" id="uploadBtn">+ IMAGE</button>
-    </div>
-    <div class="ctrl-actions" style="padding-top:0;">
-      <button class="btn" id="defaultsBtn" style="border-color:rgba(255,255,255,0.06);color:rgba(255,255,255,0.25);">⟲ DEFAULTS</button>
-    </div>
+    <!-- ── FOOTER ── -->
     <div class="ctrl" style="border:none;padding:6px 18px;">
       <div class="ctrl-hint-inline">SCROLL = ZOOM &nbsp;·&nbsp; DRAG = PAN</div>
     </div>
@@ -360,6 +715,8 @@ input[type=color]::-webkit-color-swatch { border:none; }
 </div>
 <button id="panelToggle">◂</button>
 
+
+<button id="themeBtn">RETRO</button>
 <canvas id="c"></canvas>
 
 <script>
@@ -497,6 +854,66 @@ const PRESETS = {
       { x:.6, y:.45,r:.20, c:[255,110,130,38] },
       { x:.25,y:.5, r:.18, c:[200,100,150,30] },
       { x:.7, y:.3, r:.16, c:[255,190,130,35] },
+    ],
+  },
+  vapor: {
+    label: 'VAPOR',
+    preview: 'linear-gradient(180deg,#ff71ce,#b967ff,#01cdfe,#05ffa1,#fffb96)',
+    stops: [
+      { p:0.0,  c:[255,113,206,0]  },
+      { p:0.1,  c:[255,113,206,25] },
+      { p:0.25, c:[185,103,255,55] },
+      { p:0.4,  c:[1,205,254,60]   },
+      { p:0.55, c:[5,255,161,50]   },
+      { p:0.7,  c:[255,251,150,35] },
+      { p:0.85, c:[185,103,255,18] },
+      { p:1.0,  c:[40,20,60,5]     },
+    ],
+    blobs: [
+      { x:.3, y:.3, r:.22, c:[255,113,206,42] },
+      { x:.65,y:.4, r:.20, c:[1,205,254,38]   },
+      { x:.4, y:.55,r:.18, c:[5,255,161,32]   },
+      { x:.7, y:.55,r:.16, c:[185,103,255,28] },
+    ],
+  },
+  moss: {
+    label: 'MOSS',
+    preview: 'linear-gradient(180deg,#2d5a27,#4a7c3f,#8baa6f,#c4d4a0,#5a7a4a)',
+    stops: [
+      { p:0.0,  c:[45,90,39,0]    },
+      { p:0.1,  c:[50,100,45,18]  },
+      { p:0.25, c:[74,124,63,48]  },
+      { p:0.4,  c:[120,160,90,55] },
+      { p:0.55, c:[139,170,111,45]},
+      { p:0.7,  c:[100,140,80,30] },
+      { p:0.85, c:[60,100,50,15]  },
+      { p:1.0,  c:[30,45,25,5]    },
+    ],
+    blobs: [
+      { x:.35,y:.35,r:.24, c:[100,160,70,38]  },
+      { x:.6, y:.45,r:.18, c:[140,180,100,32] },
+      { x:.3, y:.55,r:.20, c:[80,130,60,28]   },
+      { x:.7, y:.3, r:.15, c:[196,212,160,25] },
+    ],
+  },
+  blood: {
+    label: 'BLOOD',
+    preview: 'linear-gradient(180deg,#8b0000,#b22222,#dc143c,#800020,#4a0010)',
+    stops: [
+      { p:0.0,  c:[139,0,0,0]     },
+      { p:0.1,  c:[150,10,10,20]  },
+      { p:0.22, c:[178,34,34,52]  },
+      { p:0.38, c:[220,20,60,62]  },
+      { p:0.52, c:[180,20,40,50]  },
+      { p:0.66, c:[128,0,32,38]   },
+      { p:0.8,  c:[90,0,20,20]    },
+      { p:1.0,  c:[30,5,8,5]      },
+    ],
+    blobs: [
+      { x:.4, y:.3, r:.22, c:[220,30,50,45]  },
+      { x:.6, y:.5, r:.20, c:[178,34,34,38]  },
+      { x:.25,y:.45,r:.18, c:[160,10,30,30]  },
+      { x:.7, y:.35,r:.16, c:[200,50,60,32]  },
     ],
   },
   void: {
@@ -1109,6 +1526,21 @@ const panel = document.getElementById('panel');
 const panelToggle = document.getElementById('panelToggle');
 const fileInput = document.getElementById('fileInput');
 
+// ── Theme toggle ──
+const themeBtn = document.getElementById('themeBtn');
+function applyTheme(theme) {
+  document.body.setAttribute('data-theme', theme);
+  themeBtn.textContent = theme === 'dark' ? 'RETRO' : 'MODERN';
+  try { localStorage.setItem('pixelmelt-theme', theme); } catch(e) {}
+}
+const savedTheme = (() => { try { return localStorage.getItem('pixelmelt-theme'); } catch(e) { return null; } })();
+if (savedTheme) applyTheme(savedTheme);
+
+themeBtn.onclick = () => {
+  const current = document.body.getAttribute('data-theme') || 'dark';
+  applyTheme(current === 'dark' ? 'retro' : 'dark');
+};
+
 // Panel toggle
 panelToggle.onclick = () => {
   panel.classList.toggle('collapsed');
@@ -1432,17 +1864,25 @@ function handleImage(file) {
   r.readAsDataURL(file);
 }
 fileInput.addEventListener('change', e => { if (e.target.files[0]) handleImage(e.target.files[0]); });
-loader.addEventListener('dragover', e => e.preventDefault());
-loader.addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files[0]) handleImage(e.dataTransfer.files[0]); });
 
-// Also accept drops on canvas
+// Drag & drop — on loader and canvas
 document.addEventListener('dragover', e => e.preventDefault());
 document.addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files[0]) handleImage(e.dataTransfer.files[0]); });
 
-// Auto-load
-{ const img = new Image(); img.onload = () => init(img);
-  img.onerror = () => { const i2 = new Image(); i2.onload = () => init(i2); i2.src = 'david.png'; };
-  img.src = 'david.jpg'; }
+// ══════════════════════════════════════════════
+//  LOADER BUTTONS
+// ══════════════════════════════════════════════
+document.getElementById('loaderUploadBtn').onclick = (e) => {
+  e.stopPropagation();
+  fileInput.click();
+};
+
+document.getElementById('loaderStartBtn').onclick = (e) => {
+  e.stopPropagation();
+  loader.classList.add('hidden');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+};
 
 // ══════════════════════════════════════════════
 //  SCROLL ZOOM (pivot around mouse cursor)

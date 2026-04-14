@@ -24,17 +24,25 @@ function handleImage(file) {
   r.readAsDataURL(file);
 }
 fileInput.addEventListener('change', e => { if (e.target.files[0]) handleImage(e.target.files[0]); });
-loader.addEventListener('dragover', e => e.preventDefault());
-loader.addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files[0]) handleImage(e.dataTransfer.files[0]); });
 
-// Also accept drops on canvas
+// Drag & drop — on loader and canvas
 document.addEventListener('dragover', e => e.preventDefault());
 document.addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files[0]) handleImage(e.dataTransfer.files[0]); });
 
-// Auto-load
-{ const img = new Image(); img.onload = () => init(img);
-  img.onerror = () => { const i2 = new Image(); i2.onload = () => init(i2); i2.src = 'david.png'; };
-  img.src = 'david.jpg'; }
+// ══════════════════════════════════════════════
+//  LOADER BUTTONS
+// ══════════════════════════════════════════════
+document.getElementById('loaderUploadBtn').onclick = (e) => {
+  e.stopPropagation();
+  fileInput.click();
+};
+
+document.getElementById('loaderStartBtn').onclick = (e) => {
+  e.stopPropagation();
+  loader.classList.add('hidden');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+};
 
 // ══════════════════════════════════════════════
 //  SCROLL ZOOM (pivot around mouse cursor)
