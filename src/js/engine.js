@@ -1,6 +1,26 @@
 import { settings, PRESETS } from './settings.js';
 
 // ══════════════════════════════════════════════
+//  PERFORMANCE CONSTANTS & LOOKUP TABLES
+// ══════════════════════════════════════════════
+const INV255 = 1 / 255;
+
+// sqrt LUT for soft-light blending (0..255 → sqrt(x/255))
+const sqrtLUT = new Float32Array(256);
+for (let i = 0; i < 256; i++) sqrtLUT[i] = Math.sqrt(i * INV255);
+
+// sin LUT for wave animation (4096 entries, covers 0..2π)
+const SIN_LUT_SIZE = 4096;
+const SIN_LUT = new Float32Array(SIN_LUT_SIZE);
+const SIN_LUT_SCALE = SIN_LUT_SIZE / (Math.PI * 2);
+for (let i = 0; i < SIN_LUT_SIZE; i++) SIN_LUT[i] = Math.sin(i / SIN_LUT_SCALE);
+
+function fastSin(x) {
+  const idx = ((x % (Math.PI * 2)) + Math.PI * 2) * SIN_LUT_SCALE;
+  return SIN_LUT[idx & (SIN_LUT_SIZE - 1)];
+}
+
+// ══════════════════════════════════════════════
 //  ENGINE STATE
 // ══════════════════════════════════════════════
 export let imgW, imgH, srcPixels;
@@ -10,6 +30,8 @@ export let running = false;
 let accumTime = 0, lastFrameTime = 0;
 let bufCanvas, bufCtx, bufH, bufYOff, bufImageData, bufClearArr;
 let colorOvrPixels;
+let cachedBgGradient = null;  // cached gradient to avoid per-frame recreation
+let cachedBgKey = '';         // key to detect when gradient settings change
 export let currentImg = null;    // possibly bg-removed version
 export let originalImg = null;   // always the raw upload
 
@@ -350,20 +372,21 @@ function draw() {
 
   // Update melt distances
   const doBounce = settings.bounce;
+  const bounceRangeMult = settings.bounceRange * 0.01; // hoist out of loop
   for (let x=0;x<imgW;x++) {
     if (meltDelay[x]>=999990||accumTime<meltDelay[x]) { meltDist[x]=0; continue; }
     const t=accumTime-meltDelay[x];
     const grow=meltSpeed[x]*t*0.008;
     const grav=0.000006*t*t*0.0003;
     const raw=grow+grav;
-    const wave=Math.sin(t*0.00025+x*0.08)*2.5;
+    const wave=fastSin(t*0.00025+x*0.08)*2.5;
 
     if (doBounce) {
-      const mx = meltMax[x] * (settings.bounceRange / 100);
-      const cycle = grow / Math.max(1, mx);
+      const mx = meltMax[x] * bounceRangeMult;
+      const cycle = grow / (mx > 1 ? mx : 1);
       const phase = cycle % 2;
       const tri = phase < 1 ? phase : 2 - phase;
-      const smooth = (Math.sin((tri - 0.5) * Math.PI) + 1) / 2;
+      const smooth = (fastSin((tri - 0.5) * Math.PI) + 1) * 0.5;
       meltDist[x] = Math.max(0, smooth * mx + wave);
     } else {
       meltDist[x]=Math.max(0, Math.min(raw, meltMax[x]) + wave);
@@ -474,62 +497,73 @@ function draw() {
       const cR=cPx[i],cG=cPx[i+1],cB=cPx[i+2],cA=cPx[i+3];
       if (cA<2) continue;
 
-      const strength=(cA/255)*tStr;
+      const strength=(cA*INV255)*tStr;
       const bR=dst[i],bG=dst[i+1],bB=dst[i+2];
       let rR=bR+(cR-bR)*strength, rG=bG+(cG-bG)*strength, rB=bB+(cB-bB)*strength;
 
-      const sl=0.35;
-      const nr=rR/255,ng=rG/255,nb=rB/255;
-      const cr=cR/255,cg=cG/255,cb=cB/255;
-      const slR=cr<=.5?nr-(1-2*cr)*nr*(1-nr):nr+(2*cr-1)*(Math.sqrt(nr)-nr);
-      const slG=cg<=.5?ng-(1-2*cg)*ng*(1-ng):ng+(2*cg-1)*(Math.sqrt(ng)-ng);
-      const slB=cb<=.5?nb-(1-2*cb)*nb*(1-nb):nb+(2*cb-1)*(Math.sqrt(nb)-nb);
+      const sl=0.35, sl1=0.65; // sl1 = 1 - sl, precomputed
+      const nr=rR*INV255,ng=rG*INV255,nb=rB*INV255;
+      const cr=cR*INV255,cg=cG*INV255,cb=cB*INV255;
+      // Soft-light blend with sqrt LUT instead of Math.sqrt()
+      const rri = Math.min(255, Math.max(0, rR + 0.5)) | 0;
+      const rgi = Math.min(255, Math.max(0, rG + 0.5)) | 0;
+      const rbi = Math.min(255, Math.max(0, rB + 0.5)) | 0;
+      const slR=cr<=.5?nr-(1-2*cr)*nr*(1-nr):nr+(2*cr-1)*(sqrtLUT[rri]-nr);
+      const slG=cg<=.5?ng-(1-2*cg)*ng*(1-ng):ng+(2*cg-1)*(sqrtLUT[rgi]-ng);
+      const slB=cb<=.5?nb-(1-2*cb)*nb*(1-nb):nb+(2*cb-1)*(sqrtLUT[rbi]-nb);
 
-      dst[i]=Math.min(255,Math.max(0,Math.round(rR*(1-sl)+slR*255*sl)));
-      dst[i+1]=Math.min(255,Math.max(0,Math.round(rG*(1-sl)+slG*255*sl)));
-      dst[i+2]=Math.min(255,Math.max(0,Math.round(rB*(1-sl)+slB*255*sl)));
+      dst[i]=Math.min(255,Math.max(0,(rR*sl1+slR*255*sl+0.5)|0));
+      dst[i+1]=Math.min(255,Math.max(0,(rG*sl1+slG*255*sl+0.5)|0));
+      dst[i+2]=Math.min(255,Math.max(0,(rB*sl1+slB*255*sl+0.5)|0));
     }
   }
 
   // Saturation & Contrast (pixel-level)
-  const sat = settings.saturation / 100;
-  const con = settings.contrast / 100;
-  const needsSatCon = Math.abs(sat - 1) > 0.01 || Math.abs(con - 1) > 0.01;
-  if (needsSatCon) {
+  const sat = settings.saturation * 0.01;
+  const con = settings.contrast * 0.01;
+  const needsSat = Math.abs(sat - 1) > 0.01;
+  const needsCon = Math.abs(con - 1) > 0.01;
+  if (needsSat || needsCon) {
     for (let i=dMinI;i<dMaxI;i+=4) {
       if (dst[i+3]<8) continue;
       let r=dst[i], g=dst[i+1], b=dst[i+2];
-      if (Math.abs(sat-1) > 0.01) {
+      if (needsSat) {
         const gray = 0.299*r + 0.587*g + 0.114*b;
         r = gray + (r - gray) * sat;
         g = gray + (g - gray) * sat;
         b = gray + (b - gray) * sat;
       }
-      if (Math.abs(con-1) > 0.01) {
+      if (needsCon) {
         r = 128 + (r - 128) * con;
         g = 128 + (g - 128) * con;
         b = 128 + (b - 128) * con;
       }
-      dst[i]   = Math.min(255, Math.max(0, Math.round(r)));
-      dst[i+1] = Math.min(255, Math.max(0, Math.round(g)));
-      dst[i+2] = Math.min(255, Math.max(0, Math.round(b)));
+      dst[i]   = r < 0 ? 0 : r > 255 ? 255 : (r + 0.5) | 0;
+      dst[i+1] = g < 0 ? 0 : g > 255 ? 255 : (g + 0.5) | 0;
+      dst[i+2] = b < 0 ? 0 : b > 255 ? 255 : (b + 0.5) | 0;
     }
   }
 
   // Only put the dirty region to the buffer canvas
   const dY0 = Math.max(0, dirtyMinY);
   const dY1 = Math.min(bufH, dirtyMaxY + 1);
-  bufCtx.clearRect(0, 0, imgW, bufH);
-  if (dY1 > dY0) bufCtx.putImageData(bufImageData, 0, 0, 0, dY0, imgW, dY1 - dY0);
+  if (dY1 > dY0) {
+    bufCtx.clearRect(0, dY0, imgW, dY1 - dY0); // clear only dirty region
+    bufCtx.putImageData(bufImageData, 0, 0, 0, dY0, imgW, dY1 - dY0);
+  }
 
-  // Draw background
+  // Draw background (cache gradient to avoid per-frame recreation)
   const pw = getPanelOffset();
   if (settings.bgEnabled) {
     if (settings.bgMode === 'gradient') {
-      const grd = ctx.createLinearGradient(0,0,0,ch);
-      grd.addColorStop(0, settings.bgGradTop);
-      grd.addColorStop(1, settings.bgGradBot);
-      ctx.fillStyle = grd;
+      const bgKey = `${ch}|${settings.bgGradTop}|${settings.bgGradBot}`;
+      if (bgKey !== cachedBgKey) {
+        cachedBgGradient = ctx.createLinearGradient(0,0,0,ch);
+        cachedBgGradient.addColorStop(0, settings.bgGradTop);
+        cachedBgGradient.addColorStop(1, settings.bgGradBot);
+        cachedBgKey = bgKey;
+      }
+      ctx.fillStyle = cachedBgGradient;
     } else if (settings.bgMode === 'bw') {
       ctx.fillStyle = settings.bgBw;
     } else {
