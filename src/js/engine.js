@@ -70,6 +70,9 @@ export async function removeBackgroundAI(img) {
 
   // Run AI removal
   const resultBlob = await lib.removeBackground(blob, {
+    // Point to IMG.LY's data CDN so WASM and ONNX model files can be located
+    // (dynamic import from jsDelivr can't resolve relative asset paths)
+    publicPath: 'https://staticimgly.com/@imgly/background-removal-data/1.5.5/dist/',
     progress: (key, current, total) => {
       const el = document.getElementById('removeBgStatus');
       if (el) {

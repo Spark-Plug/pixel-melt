@@ -242,8 +242,10 @@ removeBgToggle.onclick = async () => {
         await init(result, true);
       } catch (e) {
         console.error('BG removal failed:', e);
-        removeBgStatus.textContent = 'FAILED';
-        setTimeout(() => { removeBgStatus.style.display = 'none'; }, 2000);
+        const msg = (e && e.message) ? e.message : String(e);
+        removeBgStatus.textContent = 'FAILED: ' + msg.slice(0, 80);
+        removeBgStatus.style.color = '#ff6060';
+        setTimeout(() => { removeBgStatus.style.display = 'none'; removeBgStatus.style.color = ''; }, 8000);
         settings.removeBg = false;
         removeBgToggle.classList.remove('on');
         removeBgLabel.textContent = 'OFF';

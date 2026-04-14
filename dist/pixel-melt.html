@@ -1178,6 +1178,9 @@ const _M = {};
   
     // Run AI removal
     const resultBlob = await lib.removeBackground(blob, {
+      // Point to IMG.LY's data CDN so WASM and ONNX model files can be located
+      // (dynamic import from jsDelivr can't resolve relative asset paths)
+      publicPath: 'https://staticimgly.com/@imgly/background-removal-data/1.5.5/dist/',
       progress: (key, current, total) => {
         const el = document.getElementById('removeBgStatus');
         if (el) {
@@ -1958,8 +1961,10 @@ const _M = {};
           await _M.init(result, true);
         } catch (e) {
           console.error('BG removal failed:', e);
-          removeBgStatus.textContent = 'FAILED';
-          setTimeout(() => { removeBgStatus.style.display = 'none'; }, 2000);
+          const msg = (e && e.message) ? e.message : String(e);
+          removeBgStatus.textContent = 'FAILED: ' + msg.slice(0, 80);
+          removeBgStatus.style.color = '#ff6060';
+          setTimeout(() => { removeBgStatus.style.display = 'none'; removeBgStatus.style.color = ''; }, 8000);
           _M.settings.removeBg = false;
           removeBgToggle.classList.remove('on');
           removeBgLabel.textContent = 'OFF';
