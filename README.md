@@ -39,7 +39,7 @@ Built with vanilla JavaScript and Canvas 2D API. Single HTML file for easy distr
 - **Scroll to zoom** (pivots around mouse cursor)
 - **Drag to pan**
 - **Drop any image** to load (or click to browse)
-- **AI background removal** — powered by [@imgly/background-removal](https://github.com/nicolo-ribaudo/background-removal-js) (model downloaded on first use, cached after)
+- **AI background removal** — powered by [@imgly/background-removal](https://github.com/imgly/background-removal-js) (model downloaded on first use, cached after)
 
 ### Controls
 | Control | Range | Description |
