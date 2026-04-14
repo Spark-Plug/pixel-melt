@@ -1051,13 +1051,11 @@ function draw() {
     }
   }
 
-  // Only put the dirty region to the buffer canvas
+  // Put the dirty region to the buffer canvas
   const dY0 = Math.max(0, dirtyMinY);
   const dY1 = Math.min(bufH, dirtyMaxY + 1);
-  if (dY1 > dY0) {
-    bufCtx.clearRect(0, dY0, imgW, dY1 - dY0); // clear only dirty region
-    bufCtx.putImageData(bufImageData, 0, 0, 0, dY0, imgW, dY1 - dY0);
-  }
+  bufCtx.clearRect(0, 0, imgW, bufH);
+  if (dY1 > dY0) bufCtx.putImageData(bufImageData, 0, 0, 0, dY0, imgW, dY1 - dY0);
 
   // Draw background (cache gradient to avoid per-frame recreation)
   const pw = getPanelOffset();
